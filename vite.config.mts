@@ -15,6 +15,7 @@ export default defineConfig({
     },
     sourcemap: true,
     outDir: 'out',
+    // target: 'es2022',
   },
   plugins: [
     react(),

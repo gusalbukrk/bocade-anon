@@ -34,3 +34,23 @@ root.render(
     <App />
   </React.StrictMode>,
 );
+
+// await new Promise((res) =>
+//   setTimeout(() => {
+//     console.log('awaited');
+//     res(true);
+//   }, 5000),
+// );
+
+window.addEventListener('load', () => {
+  console.log('loaded');
+  vscode.postMessage({ command: 'loaded' });
+});
+
+window.addEventListener('message', (event) => {
+  const data = event.data;
+
+  if (data.command === 'loaded') {
+    document.querySelector('h2')!.innerText = data.text;
+  }
+});

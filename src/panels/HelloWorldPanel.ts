@@ -1,4 +1,6 @@
+import fs from 'node:fs';
 import * as vscode from 'vscode';
+import puppeteer from 'puppeteer';
 
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';
@@ -78,7 +80,7 @@ export class HelloWorldPanel {
 
   private _setWebviewMessageListener(webview: vscode.Webview) {
     webview.onDidReceiveMessage(
-      (message: any) => {
+      async (message: any) => {
         const command = message.command;
         const text = message.text;
 
@@ -86,10 +88,93 @@ export class HelloWorldPanel {
           case 'howdy':
             vscode.window.showInformationMessage(text);
             return;
+          case 'loaded':
+            await f();
+            return;
         }
       },
       undefined,
       this._disposables,
     );
+  }
+}
+
+async function f() {
+  const browser = await puppeteer.launch({ headless: false });
+
+  const page = (await browser.pages())[0];
+
+  await page.goto('http://161.35.239.203/boca');
+
+  await page.setViewport({ width: 1080, height: 1024 });
+
+  await page.type('input[name=name]', 'team1');
+  await page.type('input[name=password]', 'pass');
+
+  await Promise.all([
+    page.click('input[value=Login]'),
+    page.waitForNavigation(),
+  ]);
+
+  await Promise.all([
+    page.waitForNavigation(),
+    page.click('a[href="problem.php"]'),
+  ]);
+
+  // each row is a problem
+  const rows = await page.$$('table:nth-of-type(3) tr:not(:first-child)');
+
+  const problems = await Promise.all(
+    rows.map(async (row) => {
+      const shortname = await (await row.$('td:nth-child(1)'))!.evaluate(
+        (td) => td.textContent,
+      );
+      const [color, balloon] = await (await row.$(
+        'td:nth-child(1) img',
+      ))!.evaluate((img) => [img.alt, img.src]);
+
+      const basename = await (await row.$('td:nth-child(2)'))!.evaluate(
+        (td) => td.textContent,
+      );
+      const fullname = await (await row.$('td:nth-child(3)'))!.evaluate(
+        (td) => td.textContent,
+      );
+
+      const pdf = await (await row.$('td:nth-child(4) a'))!.evaluate(
+        (td) => td.href,
+      );
+
+      return { shortname, color, balloon, basename, fullname, pdf };
+    }),
+  );
+
+  console.log(problems);
+
+  await (
+    await page.target().createCDPSession()
+  ).send('Page.setDownloadBehavior', {
+    behavior: 'allow',
+    downloadPath: '/home/gusalbukrk/Dev',
+  });
+
+  await page.click('table:nth-of-type(3) tr:nth-of-type(2) a[href]');
+  await waitForDownload('/home/gusalbukrk/Dev/A.pdf');
+
+  console.log('done!');
+  await browser.close();
+}
+
+// https://github.com/puppeteer/puppeteer/issues/299#issuecomment-1848206653
+async function waitForDownload(downloadPath: string, timeout = 60000) {
+  let startTime = new Date().getTime();
+
+  while (true) {
+    if (fs.existsSync(downloadPath)) {
+      return true;
+    } else if (new Date().getTime() - startTime > timeout) {
+      throw new Error('Download timeout.');
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 }
