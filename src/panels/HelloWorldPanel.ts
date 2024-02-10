@@ -67,7 +67,7 @@ export class HelloWorldPanel {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; img-src ${webview.cspSource} https:; script-src 'nonce-${nonce}';">
+          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; img-src ${webview.cspSource} https: http://161.35.239.203; script-src 'nonce-${nonce}';">
           <title>Hello World!</title>
         </head>
         <body>
@@ -89,7 +89,11 @@ export class HelloWorldPanel {
             vscode.window.showInformationMessage(text);
             return;
           case 'loaded':
-            await f();
+            const html = await f();
+            this._panel.webview.postMessage({
+              command: 'html',
+              content: html,
+            });
             return;
         }
       },
@@ -100,7 +104,7 @@ export class HelloWorldPanel {
 }
 
 async function f() {
-  const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch({ headless: true });
 
   const page = (await browser.pages())[0];
 
@@ -121,47 +125,56 @@ async function f() {
     page.click('a[href="problem.php"]'),
   ]);
 
-  // each row is a problem
-  const rows = await page.$$('table:nth-of-type(3) tr:not(:first-child)');
-
-  const problems = await Promise.all(
-    rows.map(async (row) => {
-      const shortname = await (await row.$('td:nth-child(1)'))!.evaluate(
-        (td) => td.textContent,
-      );
-      const [color, balloon] = await (await row.$(
-        'td:nth-child(1) img',
-      ))!.evaluate((img) => [img.alt, img.src]);
-
-      const basename = await (await row.$('td:nth-child(2)'))!.evaluate(
-        (td) => td.textContent,
-      );
-      const fullname = await (await row.$('td:nth-child(3)'))!.evaluate(
-        (td) => td.textContent,
-      );
-
-      const pdf = await (await row.$('td:nth-child(4) a'))!.evaluate(
-        (td) => td.href,
-      );
-
-      return { shortname, color, balloon, basename, fullname, pdf };
-    }),
+  const table = await page.$('table:nth-of-type(3)');
+  const html = (await table!.evaluate((el) => el.outerHTML)).replaceAll(
+    /(\/boca\/balloons\/[a-z0-9]+?.png)/g,
+    'http://161.35.239.203$1',
   );
+  console.log(html);
 
-  console.log(problems);
+  // // each row is a problem
+  // const rows = await page.$$('table:nth-of-type(3) tr:not(:first-child)');
 
-  await (
-    await page.target().createCDPSession()
-  ).send('Page.setDownloadBehavior', {
-    behavior: 'allow',
-    downloadPath: '/home/gusalbukrk/Dev',
-  });
+  // const problems = await Promise.all(
+  //   rows.map(async (row) => {
+  //     const shortname = await (await row.$('td:nth-child(1)'))!.evaluate(
+  //       (td) => td.textContent,
+  //     );
+  //     const [color, balloon] = await (await row.$(
+  //       'td:nth-child(1) img',
+  //     ))!.evaluate((img) => [img.alt, img.src]);
 
-  await page.click('table:nth-of-type(3) tr:nth-of-type(2) a[href]');
-  await waitForDownload('/home/gusalbukrk/Dev/A.pdf');
+  //     const basename = await (await row.$('td:nth-child(2)'))!.evaluate(
+  //       (td) => td.textContent,
+  //     );
+  //     const fullname = await (await row.$('td:nth-child(3)'))!.evaluate(
+  //       (td) => td.textContent,
+  //     );
+
+  //     const pdf = await (await row.$('td:nth-child(4) a'))!.evaluate(
+  //       (td) => td.href,
+  //     );
+
+  //     return { shortname, color, balloon, basename, fullname, pdf };
+  //   }),
+  // );
+
+  // console.log(problems);
+
+  // await (
+  //   await page.target().createCDPSession()
+  // ).send('Page.setDownloadBehavior', {
+  //   behavior: 'allow',
+  //   downloadPath: '/home/gusalbukrk/Dev',
+  // });
+
+  // await page.click('table:nth-of-type(3) tr:nth-of-type(2) a[href]');
+  // await waitForDownload('/home/gusalbukrk/Dev/A.pdf');
 
   console.log('done!');
   await browser.close();
+
+  return html;
 }
 
 // https://github.com/puppeteer/puppeteer/issues/299#issuecomment-1848206653

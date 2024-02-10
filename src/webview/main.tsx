@@ -14,6 +14,7 @@ const App = () => {
       <vscode-button id="howdy" onClick={handleButtonClick}>
         Howdy!
       </vscode-button>
+      <section></section>
     </div>
   );
 };
@@ -52,5 +53,7 @@ window.addEventListener('message', (event) => {
 
   if (data.command === 'loaded') {
     document.querySelector('h2')!.innerText = data.text;
+  } else if (data.command === 'html') {
+    document.querySelector('section')!.innerHTML += data.content;
   }
 });
