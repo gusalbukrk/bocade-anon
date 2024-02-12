@@ -23,10 +23,12 @@
 				"background": {
 					"activeOnStart": true,
 					"beginsPattern": {
-						"regexp": "vite v\\d+.\\d+.\\d+ building"
+						"regexp": "Executing task: npm run compile"
 					},
 					"endsPattern": {
-						"regexp": "built in \\d+ms"
+						// Extension Development Host will open
+						// when the following string appears in the terminal
+						"regexp": "Found 0 errors\\. Watching for file changes."
 					}
 				}
 			},
