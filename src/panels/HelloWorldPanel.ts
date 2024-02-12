@@ -1,6 +1,9 @@
 import fs from 'node:fs';
 import * as vscode from 'vscode';
 import puppeteer from 'puppeteer';
+import { JSDOM } from 'jsdom';
+import cookie from 'cookie';
+import sha256 from 'crypto-js/sha256.js';
 
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';
@@ -89,7 +92,7 @@ export class HelloWorldPanel {
             vscode.window.showInformationMessage(text);
             return;
           case 'loaded':
-            const html = await f();
+            const html = await f2();
             this._panel.webview.postMessage({
               command: 'html',
               content: html,
@@ -130,48 +133,7 @@ async function f() {
     /(\/boca\/balloons\/[a-z0-9]+?.png)/g,
     'http://161.35.239.203$1',
   );
-  console.log(html);
 
-  // // each row is a problem
-  // const rows = await page.$$('table:nth-of-type(3) tr:not(:first-child)');
-
-  // const problems = await Promise.all(
-  //   rows.map(async (row) => {
-  //     const shortname = await (await row.$('td:nth-child(1)'))!.evaluate(
-  //       (td) => td.textContent,
-  //     );
-  //     const [color, balloon] = await (await row.$(
-  //       'td:nth-child(1) img',
-  //     ))!.evaluate((img) => [img.alt, img.src]);
-
-  //     const basename = await (await row.$('td:nth-child(2)'))!.evaluate(
-  //       (td) => td.textContent,
-  //     );
-  //     const fullname = await (await row.$('td:nth-child(3)'))!.evaluate(
-  //       (td) => td.textContent,
-  //     );
-
-  //     const pdf = await (await row.$('td:nth-child(4) a'))!.evaluate(
-  //       (td) => td.href,
-  //     );
-
-  //     return { shortname, color, balloon, basename, fullname, pdf };
-  //   }),
-  // );
-
-  // console.log(problems);
-
-  // await (
-  //   await page.target().createCDPSession()
-  // ).send('Page.setDownloadBehavior', {
-  //   behavior: 'allow',
-  //   downloadPath: '/home/gusalbukrk/Dev',
-  // });
-
-  // await page.click('table:nth-of-type(3) tr:nth-of-type(2) a[href]');
-  // await waitForDownload('/home/gusalbukrk/Dev/A.pdf');
-
-  console.log('done!');
   await browser.close();
 
   return html;
@@ -190,4 +152,48 @@ async function waitForDownload(downloadPath: string, timeout = 60000) {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
+}
+
+async function f2() {
+  const cookies = cookie.parse(
+    (await fetch('http://161.35.239.203/boca')).headers
+      .getSetCookie()
+      .map((str) => str.replace(/;.*$/, ''))
+      .join('; '),
+  );
+
+  const hashedPassword = sha256(
+    sha256('pass').toString() + cookies['PHPSESSID'],
+  ).toString();
+  //
+  const login = await fetch(
+    `http://161.35.239.203/boca/index.php?name=team1&password=${hashedPassword}`,
+    {
+      headers: {
+        cookie: `PHPSESSID=${cookies['PHPSESSID']}; biscoitobocabombonera=${cookies['biscoitobocabombonera']}`,
+      },
+    },
+  );
+
+  const problemPage = await (
+    await fetch('http://161.35.239.203/boca/team/problem.php', {
+      headers: {
+        cookie: `PHPSESSID=${cookies['PHPSESSID']}; biscoitobocabombonera=${cookies['biscoitobocabombonera']}`,
+      },
+    })
+  ).text();
+
+  const { document } = new JSDOM(problemPage, {
+    url: 'http://161.35.239.203/',
+  }).window;
+
+  const table = document.querySelector('table:nth-of-type(3)')!;
+
+  table.querySelectorAll('img').forEach((img) => {
+    img.src = img.src;
+  });
+
+  const html = table.outerHTML;
+
+  return html;
 }
