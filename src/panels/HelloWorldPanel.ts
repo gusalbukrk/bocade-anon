@@ -99,7 +99,9 @@ export class HelloWorldPanel {
             vscode.window.showInformationMessage(text);
             return;
           case 'loaded':
-            const html = await f(this._globalState);
+            const cookieJar = await getCookieJar(this._globalState);
+            printCookieJar(cookieJar);
+            const html = await getProblemPageTable(cookieJar);
             this._panel.webview.postMessage({
               command: 'html',
               content: html,
@@ -113,41 +115,102 @@ export class HelloWorldPanel {
   }
 }
 
-async function f(globalState: vscode.Memento) {
-  const getNewCookie = false;
+type cookieJarObj = ReturnType<jsdom.CookieJar['toJSON']>;
 
-  if (getNewCookie) {
-    const cookieJar = (await JSDOM.fromURL('http://161.35.239.203/boca'))
-      .cookieJar;
+function getCookieFromCookieJarObj(cookieJarObj: cookieJarObj, key: string) {
+  return cookieJarObj.cookies.find((cookie) => cookie.key === key)?.value;
+}
 
-    const cookies = cookieJar.toJSON();
-    const getCookie = (key: string) =>
-      cookies.cookies.find((cookie) => cookie.key === key)!.value;
+function convertCookieJarObjToCookieJar(cookieJarObj: cookieJarObj) {
+  return jsdom.toughCookie.CookieJar.fromJSON(JSON.stringify(cookieJarObj));
+}
 
-    const hashedPassword = sha256(
-      sha256('pass').toString() + getCookie('PHPSESSID'),
-    ).toString();
-    const loginPage = await JSDOM.fromURL(
+function printCookieJar(cookieJar: jsdom.CookieJar) {
+  console.log(JSON.stringify(cookieJar.toJSON()));
+}
+
+async function logIn(cookieJarObj: cookieJarObj, cookieJar: jsdom.CookieJar) {
+  const hashedPassword = sha256(
+    sha256('pass').toString() +
+      getCookieFromCookieJarObj(cookieJarObj, 'PHPSESSID'),
+  ).toString();
+
+  const loginPageHtml = (
+    await JSDOM.fromURL(
       `http://161.35.239.203/boca/index.php?name=team1&password=${hashedPassword}`,
-      { cookieJar },
-    );
-    // console.log(loginPage.window.document.documentElement.outerHTML);
+      { cookieJar: cookieJar },
+    )
+  ).serialize();
 
-    globalState.update('cookie', cookies);
+  const loginSuccessful = loginPageHtml.includes(
+    "document.location='team/index.php'",
+  );
+
+  return loginSuccessful;
+}
+
+// if there's a stored cookie jar and it's valid, return it
+// (valid means user is already logged with it or it can be used to log in)
+// otherwise, generate new cookie jar, log using it, store it and return it
+async function getCookieJar(
+  globalState: vscode.Memento,
+): Promise<jsdom.CookieJar> {
+  const storedCookieJarObj = globalState.get<cookieJarObj>('cookieJar');
+
+  if (storedCookieJarObj !== undefined) {
+    const storedCookieJar = convertCookieJarObjToCookieJar(storedCookieJarObj);
+
+    const teamIndexPageHtml = (
+      await JSDOM.fromURL('http://161.35.239.203/boca/team/index.php', {
+        cookieJar: storedCookieJar,
+      })
+    ).serialize();
+
+    const isLogged = !teamIndexPageHtml.includes(
+      "alert('Session expired. You must log in again.');",
+    );
+
+    if (isLogged) {
+      console.log('user is already logged in with stored cookie jar');
+      return storedCookieJar;
+    }
+
+    const loginSuccessful = await logIn(storedCookieJarObj, storedCookieJar);
+
+    if (loginSuccessful) {
+      console.log('user logged in using stored cookie jar');
+      return storedCookieJar;
+    }
+
+    // only known circumstance in which next code line is reached
+    // is if PHPSESSID cookie is somehow set to undefined
+    console.log('stored cookie jar is invalid');
   }
 
-  const saved =
-    globalState.get<ReturnType<jsdom.CookieJar['toJSON']>>('cookie');
-  console.log(JSON.stringify(saved?.cookies));
+  // this page HTTP response has 2 Set-Cookie headers: PHPSESSID and biscoitobocabombonera
+  const newCookieJar = (await JSDOM.fromURL('http://161.35.239.203/boca'))
+    .cookieJar;
 
-  const cookieJar = jsdom.toughCookie.CookieJar.fromJSON(JSON.stringify(saved));
+  const newCookieJarObj = newCookieJar.toJSON();
 
+  const loginSuccessful = await logIn(newCookieJarObj, newCookieJar);
+
+  if (!loginSuccessful) {
+    throw new Error('login with newly created cookie jar failed');
+  }
+
+  globalState.update('cookieJar', newCookieJarObj);
+
+  console.log('newly created/stored cookie jar was used to log in');
+  return newCookieJar;
+}
+
+async function getProblemPageTable(cookieJar: jsdom.CookieJar) {
   const { document } = (
     await JSDOM.fromURL(`http://161.35.239.203/boca/team/problem.php`, {
       cookieJar,
     })
   ).window;
-  // console.log(document.documentElement.outerHTML);
 
   const table = document.querySelector('table:nth-of-type(3)')!;
 
