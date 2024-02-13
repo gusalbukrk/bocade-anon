@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import * as vscode from 'vscode';
 import puppeteer from 'puppeteer';
 import { JSDOM } from 'jsdom';
-import cookie from 'cookie';
 import sha256 from 'crypto-js/sha256.js';
 
 import { getUri } from '../utilities/getUri';
@@ -138,7 +137,7 @@ async function f() {
 
   return html;
 }
-
+//
 // https://github.com/puppeteer/puppeteer/issues/299#issuecomment-1848206653
 async function waitForDownload(downloadPath: string, timeout = 60000) {
   let startTime = new Date().getTime();
@@ -155,37 +154,28 @@ async function waitForDownload(downloadPath: string, timeout = 60000) {
 }
 
 async function f2() {
-  const cookies = cookie.parse(
-    (await fetch('http://161.35.239.203/boca')).headers
-      .getSetCookie()
-      .map((str) => str.replace(/;.*$/, ''))
-      .join('; '),
-  );
+  const cookieJar = (await JSDOM.fromURL('http://161.35.239.203/boca'))
+    .cookieJar;
+
+  const cookies = cookieJar.toJSON(); // all cookies from a jar in JSON format
+  const getCookie = (key: string) =>
+    cookies.cookies.find((cookie) => cookie.key === key)!.value;
 
   const hashedPassword = sha256(
-    sha256('pass').toString() + cookies['PHPSESSID'],
+    sha256('pass').toString() + getCookie('PHPSESSID'),
   ).toString();
-  //
-  const login = await fetch(
+  const loginPage = await JSDOM.fromURL(
     `http://161.35.239.203/boca/index.php?name=team1&password=${hashedPassword}`,
-    {
-      headers: {
-        cookie: `PHPSESSID=${cookies['PHPSESSID']}; biscoitobocabombonera=${cookies['biscoitobocabombonera']}`,
-      },
-    },
+    { cookieJar },
   );
+  // console.log(loginPage.window.document.documentElement.outerHTML);
 
-  const problemPage = await (
-    await fetch('http://161.35.239.203/boca/team/problem.php', {
-      headers: {
-        cookie: `PHPSESSID=${cookies['PHPSESSID']}; biscoitobocabombonera=${cookies['biscoitobocabombonera']}`,
-      },
+  const { document } = (
+    await JSDOM.fromURL(`http://161.35.239.203/boca/team/problem.php`, {
+      cookieJar,
     })
-  ).text();
-
-  const { document } = new JSDOM(problemPage, {
-    url: 'http://161.35.239.203/',
-  }).window;
+  ).window;
+  // console.log(document.documentElement.outerHTML);
 
   const table = document.querySelector('table:nth-of-type(3)')!;
 
@@ -193,7 +183,5 @@ async function f2() {
     img.src = img.src;
   });
 
-  const html = table.outerHTML;
-
-  return html;
+  return table.outerHTML;
 }
