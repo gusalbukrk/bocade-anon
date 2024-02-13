@@ -5,7 +5,7 @@ export function activate(context: vscode.ExtensionContext) {
   const helloCommand = vscode.commands.registerCommand(
     'hello-world.helloWorld',
     () => {
-      HelloWorldPanel.render(context.extensionUri);
+      HelloWorldPanel.render(context.extensionUri, context.globalState);
     },
   );
 

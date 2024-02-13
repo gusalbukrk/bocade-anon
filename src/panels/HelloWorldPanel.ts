@@ -1,7 +1,5 @@
-import fs from 'node:fs';
 import * as vscode from 'vscode';
-import puppeteer from 'puppeteer';
-import { JSDOM } from 'jsdom';
+import jsdom, { JSDOM } from 'jsdom';
 import sha256 from 'crypto-js/sha256.js';
 
 import { getUri } from '../utilities/getUri';
@@ -10,10 +8,16 @@ import { getNonce } from '../utilities/getNonce';
 export class HelloWorldPanel {
   public static currentPanel: HelloWorldPanel | undefined;
   private readonly _panel: vscode.WebviewPanel;
+  private readonly _globalState: vscode.Memento;
   private _disposables: vscode.Disposable[] = [];
 
-  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+  private constructor(
+    panel: vscode.WebviewPanel,
+    globalState: vscode.Memento,
+    extensionUri: vscode.Uri,
+  ) {
     this._panel = panel;
+    this._globalState = globalState;
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
     this._panel.webview.html = this._getWebviewContent(
       this._panel.webview,
@@ -22,7 +26,7 @@ export class HelloWorldPanel {
     this._setWebviewMessageListener(this._panel.webview);
   }
 
-  public static render(extensionUri: vscode.Uri) {
+  public static render(extensionUri: vscode.Uri, globalState: vscode.Memento) {
     if (HelloWorldPanel.currentPanel) {
       HelloWorldPanel.currentPanel._panel.reveal(vscode.ViewColumn.One);
     } else {
@@ -38,7 +42,11 @@ export class HelloWorldPanel {
         },
       );
 
-      HelloWorldPanel.currentPanel = new HelloWorldPanel(panel, extensionUri);
+      HelloWorldPanel.currentPanel = new HelloWorldPanel(
+        panel,
+        globalState,
+        extensionUri,
+      );
     }
   }
 
@@ -91,7 +99,7 @@ export class HelloWorldPanel {
             vscode.window.showInformationMessage(text);
             return;
           case 'loaded':
-            const html = await f2();
+            const html = await f(this._globalState);
             this._panel.webview.postMessage({
               command: 'html',
               content: html,
@@ -105,70 +113,34 @@ export class HelloWorldPanel {
   }
 }
 
-async function f() {
-  const browser = await puppeteer.launch({ headless: true });
+async function f(globalState: vscode.Memento) {
+  const getNewCookie = false;
 
-  const page = (await browser.pages())[0];
+  if (getNewCookie) {
+    const cookieJar = (await JSDOM.fromURL('http://161.35.239.203/boca'))
+      .cookieJar;
 
-  await page.goto('http://161.35.239.203/boca');
+    const cookies = cookieJar.toJSON();
+    const getCookie = (key: string) =>
+      cookies.cookies.find((cookie) => cookie.key === key)!.value;
 
-  await page.setViewport({ width: 1080, height: 1024 });
+    const hashedPassword = sha256(
+      sha256('pass').toString() + getCookie('PHPSESSID'),
+    ).toString();
+    const loginPage = await JSDOM.fromURL(
+      `http://161.35.239.203/boca/index.php?name=team1&password=${hashedPassword}`,
+      { cookieJar },
+    );
+    // console.log(loginPage.window.document.documentElement.outerHTML);
 
-  await page.type('input[name=name]', 'team1');
-  await page.type('input[name=password]', 'pass');
-
-  await Promise.all([
-    page.click('input[value=Login]'),
-    page.waitForNavigation(),
-  ]);
-
-  await Promise.all([
-    page.waitForNavigation(),
-    page.click('a[href="problem.php"]'),
-  ]);
-
-  const table = await page.$('table:nth-of-type(3)');
-  const html = (await table!.evaluate((el) => el.outerHTML)).replaceAll(
-    /(\/boca\/balloons\/[a-z0-9]+?.png)/g,
-    'http://161.35.239.203$1',
-  );
-
-  await browser.close();
-
-  return html;
-}
-//
-// https://github.com/puppeteer/puppeteer/issues/299#issuecomment-1848206653
-async function waitForDownload(downloadPath: string, timeout = 60000) {
-  let startTime = new Date().getTime();
-
-  while (true) {
-    if (fs.existsSync(downloadPath)) {
-      return true;
-    } else if (new Date().getTime() - startTime > timeout) {
-      throw new Error('Download timeout.');
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    globalState.update('cookie', cookies);
   }
-}
 
-async function f2() {
-  const cookieJar = (await JSDOM.fromURL('http://161.35.239.203/boca'))
-    .cookieJar;
+  const saved =
+    globalState.get<ReturnType<jsdom.CookieJar['toJSON']>>('cookie');
+  console.log(JSON.stringify(saved?.cookies));
 
-  const cookies = cookieJar.toJSON(); // all cookies from a jar in JSON format
-  const getCookie = (key: string) =>
-    cookies.cookies.find((cookie) => cookie.key === key)!.value;
-
-  const hashedPassword = sha256(
-    sha256('pass').toString() + getCookie('PHPSESSID'),
-  ).toString();
-  const loginPage = await JSDOM.fromURL(
-    `http://161.35.239.203/boca/index.php?name=team1&password=${hashedPassword}`,
-    { cookieJar },
-  );
-  // console.log(loginPage.window.document.documentElement.outerHTML);
+  const cookieJar = jsdom.toughCookie.CookieJar.fromJSON(JSON.stringify(saved));
 
   const { document } = (
     await JSDOM.fromURL(`http://161.35.239.203/boca/team/problem.php`, {
