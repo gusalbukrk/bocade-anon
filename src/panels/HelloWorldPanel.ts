@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
-import jsdom, { JSDOM } from 'jsdom';
 
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';
-import getCookieJar, { printCookieJar } from '../utilities/getCookieJar';
+import getPageJSDOM from '../utilities/getCookieJar';
 
 export class HelloWorldPanel {
   public static currentPanel: HelloWorldPanel | undefined;
@@ -99,9 +98,7 @@ export class HelloWorldPanel {
             vscode.window.showInformationMessage(text);
             return;
           case 'loaded':
-            const cookieJar = await getCookieJar(this._globalState);
-            printCookieJar(cookieJar);
-            const html = await getProblemPageTable(cookieJar);
+            const html = await getProblemPageTable(this._globalState);
             this._panel.webview.postMessage({
               command: 'html',
               content: html,
@@ -115,14 +112,15 @@ export class HelloWorldPanel {
   }
 }
 
-async function getProblemPageTable(cookieJar: jsdom.CookieJar) {
-  const { document } = (
-    await JSDOM.fromURL(`http://161.35.239.203/boca/team/problem.php`, {
-      cookieJar,
-    })
-  ).window;
+async function getProblemPageTable(globalState: vscode.Memento) {
+  const problemPageJSDOM = await getPageJSDOM(
+    'http://161.35.239.203/boca/team/problem.php',
+    globalState,
+  );
 
-  const table = document.querySelector('table:nth-of-type(3)')!;
+  const table = problemPageJSDOM.window.document.querySelector(
+    'table:nth-of-type(3)',
+  )!;
 
   table.querySelectorAll('img').forEach((img) => {
     img.src = img.src;
