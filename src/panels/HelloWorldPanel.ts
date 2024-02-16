@@ -1,8 +1,9 @@
+import path from 'node:path';
 import * as vscode from 'vscode';
 
 import { getUri } from '../utilities/getUri';
 import { getNonce } from '../utilities/getNonce';
-import getPageJSDOM from '../utilities/getCookieJar';
+import getPageJSDOM, { download } from '../utilities/getCookieJar';
 
 export class HelloWorldPanel {
   public static currentPanel: HelloWorldPanel | undefined;
@@ -90,19 +91,31 @@ export class HelloWorldPanel {
   private _setWebviewMessageListener(webview: vscode.Webview) {
     webview.onDidReceiveMessage(
       async (message: any) => {
-        const command = message.command;
-        const text = message.text;
-
-        switch (command) {
-          case 'howdy':
-            vscode.window.showInformationMessage(text);
+        switch (message.command) {
+          case 'howdy': // howdy button was clicked
+            vscode.window.showInformationMessage(message.text);
             return;
-          case 'loaded':
-            const html = await getProblemPageTable(this._globalState);
+          case 'loaded': // window on load event has just been triggered
+            const [html, pdfs] = await getProblemPageTable(this._globalState);
             this._panel.webview.postMessage({
-              command: 'html',
+              command: 'update-ui',
               content: html,
+              pdfs,
             });
+            return;
+          case 'download': // user clicked on a link to download a pdf
+            const pathToSave =
+              vscode.workspace.workspaceFolders === undefined
+                ? // if VS Code doesn't have a opened directory, save file in cwd
+                  // (i.e. the directory from which VS Code was opened from)
+                  message.name
+                : path.join(
+                    vscode.workspace.workspaceFolders[0].uri.fsPath,
+                    message.name,
+                  );
+
+            await download(message.url, pathToSave, this._globalState);
+
             return;
         }
       },
@@ -126,5 +139,9 @@ async function getProblemPageTable(globalState: vscode.Memento) {
     img.src = img.src;
   });
 
-  return table.outerHTML;
+  const pdfs = [...table.querySelectorAll('a')].map((a) => {
+    return { name: a.textContent, url: a.href };
+  });
+
+  return [table.outerHTML, pdfs];
 }

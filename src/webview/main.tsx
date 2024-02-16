@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   provideVSCodeDesignSystem,
@@ -8,6 +8,21 @@ import {
 provideVSCodeDesignSystem().register(vsCodeButton());
 
 const App = () => {
+  const [pdfs, setPdfs] = useState<{ name: string; url: string }[]>([]);
+
+  // sometimes is necessary to attach events listeners inside react scope
+  // because, for instance, it depends on a state
+  // in this case, use `useEffect()` with an empty array of dependencies
+  // empty array of deps means effect will only run once, after initial render
+  useEffect(() => {
+    window.addEventListener('message', (event) => {
+      const message = event.data;
+      if (message.command === 'update-ui') {
+        setPdfs(message.pdfs);
+      }
+    });
+  }, []);
+
   return (
     <div>
       <h2>Hello, world!</h2>
@@ -15,6 +30,15 @@ const App = () => {
         Howdy!
       </vscode-button>
       <section></section>
+      {pdfs.map(({ name, url }) => {
+        return (
+          <p>
+            <a href={url} onClick={handleDownloadLinkClick}>
+              {name}
+            </a>
+          </p>
+        );
+      })}
     </div>
   );
 };
@@ -29,19 +53,25 @@ function handleButtonClick() {
   });
 }
 
+function handleDownloadLinkClick(
+  e: React.MouseEvent<HTMLAnchorElement> & { target: HTMLAnchorElement },
+) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  vscode.postMessage({
+    command: 'download',
+    name: e.target.textContent,
+    url: e.target.href,
+  });
+}
+
 const root = createRoot(document.getElementById('root')!);
 root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,
 );
-
-// await new Promise((res) =>
-//   setTimeout(() => {
-//     console.log('awaited');
-//     res(true);
-//   }, 5000),
-// );
 
 window.addEventListener('load', () => {
   console.log('loaded');
@@ -51,9 +81,7 @@ window.addEventListener('load', () => {
 window.addEventListener('message', (event) => {
   const data = event.data;
 
-  if (data.command === 'loaded') {
-    document.querySelector('h2')!.innerText = data.text;
-  } else if (data.command === 'html') {
+  if (data.command === 'update-ui') {
     document.querySelector('section')!.innerHTML += data.content;
   }
 });

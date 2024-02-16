@@ -1,15 +1,21 @@
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+
 import * as vscode from 'vscode';
 import jsdom, { JSDOM } from 'jsdom';
 import sha256 from 'crypto-js/sha256.js';
 
 type cookieJarObj = ReturnType<jsdom.CookieJar['toJSON']>;
 
-/** if there's a stored cookie jar and it's valid, return page in url
-(valid means user is already logged with it or it can be used to log in);
-otherwise, generate new cookie jar, log using it, store it and return page in url;
+/** if there's a stored cookie jar and it's valid, return page in given url
+(valid means user is already logged with it or it was successfully used to log in just now);
+otherwise, generate new cookie jar, log using it, store it and return page in given url;
 also, handles calls with url set to index/login page as a request for logging out,
-this assumption is possible because this function is never directly used for login,
-instead logging in is an action performed internally by this function when needed */
+this assumption is possible because this function is never used to navigate to index page
+because there's no point in getting the JSDOM of index page, because it only has a login form;
+logging in is an action performed internally by this function
+when it needs to get a page which requires authentication and user isn't yet logged in */
 async function getPageJSDOM(
   url: string,
   globalState: vscode.Memento,
@@ -78,6 +84,76 @@ async function getPageJSDOM(
   return await JSDOM.fromURL(url, { cookieJar: newCookieJar });
 }
 
+async function download(
+  url: string,
+  pathToSave: string,
+  globalState: vscode.Memento,
+) {
+  const request = http.get(
+    url,
+    {
+      headers: {
+        cookie: await getCookieString(globalState),
+      },
+    },
+    function (response) {
+      if (response.headers['content-type'] === 'application/force-download') {
+        const file = fs.createWriteStream(pathToSave);
+        response.pipe(file);
+
+        console.log(
+          path.basename(pathToSave) + ' saved to ' + path.dirname(pathToSave),
+        );
+      } else if (
+        response.headers['content-type'] === 'text/html; charset=UTF-8'
+      ) {
+        let responseHtml = '';
+        response.on('data', (chunk) => {
+          responseHtml += chunk;
+        });
+
+        response.on('end', async () => {
+          if (!isLogged(responseHtml)) {
+            console.log("tried to download a file, but user isn't logged in");
+
+            // navigate to a page which requires authentication
+            // as a consequence, user will get logged in
+            await getPageJSDOM(
+              'http://161.35.239.203/boca/team/index.php',
+              globalState,
+            );
+
+            download(url, pathToSave, globalState);
+          }
+        });
+      }
+    },
+  );
+}
+
+async function getCookieString(globalState: vscode.Memento) {
+  let cookieJarObj = globalState.get<cookieJarObj>('cookieJar');
+
+  if (cookieJarObj === undefined) {
+    // navigate to a page which requires authentication
+    // as a consequence, user will get logged in
+    await getPageJSDOM(
+      'http://161.35.239.203/boca/team/index.php',
+      globalState,
+    );
+
+    cookieJarObj = globalState.get<cookieJarObj>('cookieJar')!;
+  }
+
+  const cookieJar = convertCookieJarObjToCookieJar(cookieJarObj);
+
+  const cookieString = cookieJar.getCookieStringSync(
+    'http://161.35.239.203/boca',
+  );
+
+  return cookieString;
+}
+
 function isLogged(pageHtml: string) {
   return !pageHtml.includes(
     "alert('Session expired. You must log in again.');",
@@ -123,3 +199,4 @@ function isLogoutUrl(url: string) {
 }
 
 export default getPageJSDOM;
+export { download };
