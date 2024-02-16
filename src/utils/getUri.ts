@@ -1,5 +1,3 @@
-// file: src/utilities/getUri.ts
-
 import { Uri, Webview } from 'vscode';
 
 export function getUri(

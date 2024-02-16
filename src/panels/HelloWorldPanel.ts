@@ -1,9 +1,9 @@
 import path from 'node:path';
 import * as vscode from 'vscode';
 
-import { getUri } from '../utilities/getUri';
-import { getNonce } from '../utilities/getNonce';
-import getPageJSDOM, { download } from '../utilities/getCookieJar';
+import { getUri } from '../utils/getUri';
+import { getNonce } from '../utils/getNonce';
+import { getPageJSDOM, download } from '../utils/navigate';
 
 export class HelloWorldPanel {
   public static currentPanel: HelloWorldPanel | undefined;

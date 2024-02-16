@@ -198,5 +198,4 @@ function isLogoutUrl(url: string) {
   return url === 'http://161.35.239.203/boca/index.php';
 }
 
-export default getPageJSDOM;
-export { download };
+export { getPageJSDOM, download };
