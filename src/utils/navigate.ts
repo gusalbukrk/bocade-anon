@@ -97,6 +97,9 @@ async function download(
       },
     },
     function (response) {
+      // BOCA team dashboard has download links for 2 types of files,
+      // pdfs (at problem.php) and source code files (at run.php)
+      // both are sent with content-type 'application/force-download'
       if (response.headers['content-type'] === 'application/force-download') {
         const file = fs.createWriteStream(pathToSave);
         response.pipe(file);
@@ -123,8 +126,12 @@ async function download(
               globalState,
             );
 
-            download(url, pathToSave, globalState);
+            return await download(url, pathToSave, globalState);
           }
+
+          throw new Error(
+            `download unsuccessful, maybe there's something wrong with the URL (${url}).`,
+          );
         });
       }
     },
