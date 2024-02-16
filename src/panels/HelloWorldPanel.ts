@@ -96,11 +96,20 @@ export class HelloWorldPanel {
             vscode.window.showInformationMessage(message.text);
             return;
           case 'loaded': // window on load event has just been triggered
-            const [html, pdfs] = await getProblemPageTable(this._globalState);
+            const [html, problemPageDownloadLinks] = await getProblemPageTable(
+              this._globalState,
+            );
+            const runPageDownloadLinks = await getRunPageLinks(
+              this._globalState,
+            );
+
             this._panel.webview.postMessage({
               command: 'update-ui',
               content: html,
-              pdfs,
+              downloadLinks: [
+                ...problemPageDownloadLinks,
+                ...runPageDownloadLinks,
+              ],
             });
             return;
           case 'download': // user clicked on a link to download a pdf
@@ -144,4 +153,19 @@ async function getProblemPageTable(globalState: vscode.Memento) {
   });
 
   return [table.outerHTML, pdfs];
+}
+
+async function getRunPageLinks(globalState: vscode.Memento) {
+  const runPageJSDOM = await getPageJSDOM(
+    'http://161.35.239.203/boca/team/run.php',
+    globalState,
+  );
+
+  const links = [
+    ...runPageJSDOM.window.document.querySelectorAll<HTMLAnchorElement>(
+      'table:nth-of-type(3) a',
+    ),
+  ].map((a) => ({ name: a.textContent!, url: a.href }));
+
+  return links;
 }

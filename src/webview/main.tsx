@@ -8,7 +8,9 @@ import {
 provideVSCodeDesignSystem().register(vsCodeButton());
 
 const App = () => {
-  const [pdfs, setPdfs] = useState<{ name: string; url: string }[]>([]);
+  const [downloadLinks, setDownloadLinks] = useState<
+    { name: string; url: string }[]
+  >([]);
 
   // sometimes is necessary to attach events listeners inside react scope
   // because, for instance, it depends on a state
@@ -18,7 +20,7 @@ const App = () => {
     window.addEventListener('message', (event) => {
       const message = event.data;
       if (message.command === 'update-ui') {
-        setPdfs(message.pdfs);
+        setDownloadLinks(message.downloadLinks);
       }
     });
   }, []);
@@ -30,7 +32,7 @@ const App = () => {
         Howdy!
       </vscode-button>
       <section></section>
-      {pdfs.map(({ name, url }) => {
+      {downloadLinks.map(({ name, url }) => {
         return (
           <p>
             <a href={url} onClick={handleDownloadLinkClick}>
