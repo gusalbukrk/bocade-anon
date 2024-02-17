@@ -6,20 +6,38 @@ import * as vscode from 'vscode';
 import jsdom, { JSDOM } from 'jsdom';
 import sha256 from 'crypto-js/sha256.js';
 
+import getCredentials, { credentials } from './getCredentials';
+
 type cookieJarObj = ReturnType<jsdom.CookieJar['toJSON']>;
 
-/** if there's a stored cookie jar and it's valid, return page in given url
+/** if there's a stored cookie jar and it's valid, return page in given path
 (valid means user is already logged with it or it was successfully used to log in just now);
-otherwise, generate new cookie jar, log using it, store it and return page in given url;
-also, handles calls with url set to index/login page as a request for logging out,
+otherwise, generate new cookie jar, log using it, store it and return page in given path;
+also, handles calls with path set to index/login page as a request for logging out,
 this assumption is possible because this function is never used to navigate to index page
-because there's no point in getting the JSDOM of index page, because it only has a login form;
+because there's no point in getting the JSDOM of index page (it only has a login form);
 logging in is an action performed internally by this function
 when it needs to get a page which requires authentication and user isn't yet logged in */
 async function getPageJSDOM(
-  url: string,
+  pagePath: string, // relative to `http://${credentials.ip}/boca/`
   globalState: vscode.Memento,
 ): Promise<JSDOM> {
+  const credentials = getCredentials(
+    globalState,
+    false,
+  ) as NonNullable<credentials> | null;
+
+  if (credentials === null) {
+    console.log('no credentials stored');
+
+    // if there're no credentials stored, there should also not be a stored cookie jar
+    globalState.update('cookieJar', undefined);
+
+    return new JSDOM();
+  }
+
+  const url = generateBOCAURL(credentials, pagePath);
+
   const storedCookieJarObj = globalState.get<cookieJarObj>('cookieJar');
 
   if (storedCookieJarObj !== undefined) {
@@ -30,7 +48,7 @@ async function getPageJSDOM(
     if (isLogged(pageJSDOM.serialize())) {
       console.log('user is already logged in with stored cookie jar');
 
-      if (isLogoutUrl(url)) {
+      if (isLogoutPath(url)) {
         globalState.update('cookieJar', undefined);
         console.log('logged out');
       }
@@ -38,7 +56,7 @@ async function getPageJSDOM(
       return pageJSDOM;
     }
 
-    if (isLogoutUrl(url)) {
+    if (isLogoutPath(url)) {
       console.log(
         'user is not logged in with stored cookie jar, no need to log out',
       );
@@ -49,6 +67,7 @@ async function getPageJSDOM(
     }
 
     const loginSuccessful = await logIn(
+      credentials,
       getCookieFromCookieJarObj(storedCookieJarObj, 'PHPSESSID'),
       storedCookieJar,
     );
@@ -60,16 +79,27 @@ async function getPageJSDOM(
 
     // only known circumstance in which next code line is reached
     // is if PHPSESSID cookie is somehow set to undefined
-    console.log('stored cookie jar is invalid');
+    console.log('tried to logging in with stored cookie jar, but failed');
   }
 
-  // this page HTTP response has 2 Set-Cookie headers: PHPSESSID and biscoitobocabombonera
-  const newCookieJar = (await JSDOM.fromURL('http://161.35.239.203/boca'))
-    .cookieJar;
+  if (isLogoutPath(url)) {
+    console.log(
+      "logout not needed, user is not logged in and there's no stored cookie jar",
+    );
+
+    return new JSDOM();
+  }
+
+  // visit BOCA index page (`boca/index.php`) because its HTTP response has
+  // 2 Set-Cookie headers: PHPSESSID and biscoitobocabombonera
+  const newCookieJar = (
+    await JSDOM.fromURL(generateBOCAURL(credentials, 'index.php'))
+  ).cookieJar;
 
   const newCookieJarObj = newCookieJar.toJSON();
 
   const loginSuccessful = await logIn(
+    credentials,
     getCookieFromCookieJarObj(newCookieJarObj, 'PHPSESSID'),
     newCookieJar,
   );
@@ -121,10 +151,7 @@ async function download(
 
             // navigate to a page which requires authentication
             // as a consequence, user will get logged in
-            await getPageJSDOM(
-              'http://161.35.239.203/boca/team/index.php',
-              globalState,
-            );
+            await getPageJSDOM('team/index.php', globalState);
 
             return await download(url, pathToSave, globalState);
           }
@@ -138,16 +165,75 @@ async function download(
   );
 }
 
+function generateBOCAURL(credentials: NonNullable<credentials>, path: string) {
+  return `http://${credentials.ip}/boca/${path}`;
+}
+
+// returns boolean indicating if credentials are valid
+async function storeCredentialsIfValid(
+  credentials: credentials,
+  globalState: vscode.Memento,
+) {
+  console.log(
+    `checking if credentials are valid: ${JSON.stringify(credentials)}`,
+  );
+
+  if (
+    credentials === undefined ||
+    credentials === null ||
+    Object.values(credentials).some((c) => c === '')
+  ) {
+    console.log('credentials are in invalid format');
+    return false;
+  }
+
+  let html;
+  try {
+    // jsdom's `fromURL` doesn't have a timeout option (https://github.com/jsdom/jsdom/issues/2824)
+    html = await (
+      await fetch(generateBOCAURL(credentials, 'index.php'), {
+        signal: AbortSignal.timeout(5000), // will error if request takes longer than 5s
+      })
+    ).text();
+  } catch (e) {
+    console.log('`credentials.ip` is unreachable');
+    return false;
+  }
+
+  const dom = new JSDOM(html);
+  const isBOCAIndexPage =
+    /^BOCA Online Contest Administrator boca-[.0-9]+ - Login$/.test(
+      dom.window.document.title,
+    );
+
+  if (!isBOCAIndexPage) {
+    console.log('`credentials.ip` is not a BOCA server');
+    return false;
+  }
+
+  globalState.update('credentials', credentials);
+
+  try {
+    // getPageJSDOM throws error if login fails; although, it's also possible it throws other errors
+    // in any case, if it throws, it means credentials are invalid
+    await getPageJSDOM('team/index.php', globalState);
+  } catch (e: unknown) {
+    globalState.update('credentials', undefined);
+    console.log("couldn't log in with given credentials");
+    return false;
+  }
+
+  console.log('credentials are valid');
+  return true;
+}
+
 async function getCookieString(globalState: vscode.Memento) {
   let cookieJarObj = globalState.get<cookieJarObj>('cookieJar');
 
   if (cookieJarObj === undefined) {
     // navigate to a page which requires authentication
     // as a consequence, user will get logged in
-    await getPageJSDOM(
-      'http://161.35.239.203/boca/team/index.php',
-      globalState,
-    );
+    await getPageJSDOM('team/index.php', globalState);
 
     cookieJarObj = globalState.get<cookieJarObj>('cookieJar')!;
   }
@@ -155,7 +241,7 @@ async function getCookieString(globalState: vscode.Memento) {
   const cookieJar = convertCookieJarObjToCookieJar(cookieJarObj);
 
   const cookieString = cookieJar.getCookieStringSync(
-    'http://161.35.239.203/boca',
+    generateBOCAURL(getCredentials(globalState)!, ''),
   );
 
   return cookieString;
@@ -180,14 +266,18 @@ function printCookieJar(cookieJar: jsdom.CookieJar) {
   console.log(JSON.stringify(cookieJarObj));
 }
 
-async function logIn(phpsessid: string, cookieJar: jsdom.CookieJar) {
+async function logIn(
+  credentials: NonNullable<credentials>,
+  phpsessid: string,
+  cookieJar: jsdom.CookieJar,
+) {
   const hashedPassword = sha256(
-    sha256('pass').toString() + phpsessid,
+    sha256(credentials.password).toString() + phpsessid,
   ).toString();
 
   const loginPageHtml = (
     await JSDOM.fromURL(
-      `http://161.35.239.203/boca/index.php?name=team1&password=${hashedPassword}`,
+      `${generateBOCAURL(credentials, 'index.php')}?name=${credentials.username}&password=${hashedPassword}`,
       { cookieJar },
     )
   ).serialize();
@@ -199,10 +289,11 @@ async function logIn(phpsessid: string, cookieJar: jsdom.CookieJar) {
   return loginSuccessful;
 }
 
+// path is relative to `http://${credentials.ip}/boca/`
 // if BOCA index page (which is also the login page) is hit by logged user, it logs out
 // BOCA's own submit button is simply a link to this url
-function isLogoutUrl(url: string) {
-  return url === 'http://161.35.239.203/boca/index.php';
+function isLogoutPath(path: string) {
+  return path === '' || path === 'index.php';
 }
 
-export { getPageJSDOM, download };
+export { getPageJSDOM, download, storeCredentialsIfValid };

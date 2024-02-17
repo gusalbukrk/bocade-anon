@@ -1,9 +1,15 @@
+import { JSDOM } from 'jsdom';
 import path from 'node:path';
 import * as vscode from 'vscode';
 
+import getCredentials, { credentials } from '../utils/getCredentials';
 import { getUri } from '../utils/getUri';
 import { getNonce } from '../utils/getNonce';
-import { getPageJSDOM, download } from '../utils/navigate';
+import {
+  getPageJSDOM,
+  download,
+  storeCredentialsIfValid,
+} from '../utils/navigate';
 
 export class HelloWorldPanel {
   public static currentPanel: HelloWorldPanel | undefined;
@@ -77,7 +83,7 @@ export class HelloWorldPanel {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; img-src ${webview.cspSource} https: http://161.35.239.203; script-src 'nonce-${nonce}';">
+          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; img-src ${webview.cspSource} https: http:; script-src 'nonce-${nonce}';">
           <title>Hello World!</title>
         </head>
         <body>
@@ -96,21 +102,23 @@ export class HelloWorldPanel {
             vscode.window.showInformationMessage(message.text);
             return;
           case 'loaded': // window on load event has just been triggered
-            const [html, problemPageDownloadLinks] = await getProblemPageTable(
-              this._globalState,
-            );
-            const runPageDownloadLinks = await getRunPageLinks(
-              this._globalState,
-            );
+            updateUI(this._globalState, this._panel);
+            return;
+          case 'login': // login form has been submitted
+            // log out (consequently, clear cookie jar) to assure
+            // old credentials don't interfere with new credentials validation
+            await getPageJSDOM('index.php', this._globalState);
 
-            this._panel.webview.postMessage({
-              command: 'update-ui',
-              content: html,
-              downloadLinks: [
-                ...problemPageDownloadLinks,
-                ...runPageDownloadLinks,
-              ],
-            });
+            const areCredentialsValid = await storeCredentialsIfValid(
+              message.credentials,
+              this._globalState,
+            );
+            updateUI(this._globalState, this._panel);
+            return;
+          case 'logout': // logout button was clicked
+            getPageJSDOM('index.php', this._globalState); // log out
+            this._globalState.update('credentials', undefined);
+            updateUI(this._globalState, this._panel);
             return;
           case 'download': // user clicked on a link to download a pdf
             const pathToSave =
@@ -134,11 +142,36 @@ export class HelloWorldPanel {
   }
 }
 
+// if there're stored credentials, fetch data from BOCA and send it to the webview
+async function updateUI(
+  globalState: vscode.Memento,
+  panel: vscode.WebviewPanel,
+) {
+  const credentials = getCredentials(globalState, false);
+
+  if (credentials === null) {
+    panel.webview.postMessage({
+      command: 'update-ui',
+      credentials,
+    });
+    return;
+  }
+
+  const [html, problemPageDownloadLinks] =
+    await getProblemPageTable(globalState);
+  const runPageDownloadLinks = await getRunPageLinks(globalState);
+
+  panel.webview.postMessage({
+    command: 'update-ui',
+    credentials,
+    content: html,
+    downloadLinks: [...problemPageDownloadLinks, ...runPageDownloadLinks],
+  });
+}
+
 async function getProblemPageTable(globalState: vscode.Memento) {
-  const problemPageJSDOM = await getPageJSDOM(
-    'http://161.35.239.203/boca/team/problem.php',
-    globalState,
-  );
+  const ip = getCredentials(globalState)!.ip;
+  const problemPageJSDOM = await getPageJSDOM('team/problem.php', globalState);
 
   const table = problemPageJSDOM.window.document.querySelector(
     'table:nth-of-type(3)',
@@ -156,10 +189,8 @@ async function getProblemPageTable(globalState: vscode.Memento) {
 }
 
 async function getRunPageLinks(globalState: vscode.Memento) {
-  const runPageJSDOM = await getPageJSDOM(
-    'http://161.35.239.203/boca/team/run.php',
-    globalState,
-  );
+  const ip = getCredentials(globalState)!.ip;
+  const runPageJSDOM = await getPageJSDOM('team/run.php', globalState);
 
   const links = [
     ...runPageJSDOM.window.document.querySelectorAll<HTMLAnchorElement>(

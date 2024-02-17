@@ -5,12 +5,21 @@ import {
   vsCodeButton,
 } from '@vscode/webview-ui-toolkit';
 
+import { credentials } from '../utils/getCredentials.js';
+
+type downloadLinks = { name: string; url: string }[];
+
+type DashboardProps = {
+  sectionContent: string;
+  downloadLinks: downloadLinks;
+};
+
 provideVSCodeDesignSystem().register(vsCodeButton());
 
 const App = () => {
-  const [downloadLinks, setDownloadLinks] = useState<
-    { name: string; url: string }[]
-  >([]);
+  const [credentials, setCredentials] = useState<credentials>();
+  const [sectionContent, setSectionContent] = useState<string>();
+  const [downloadLinks, setDownloadLinks] = useState<downloadLinks>();
 
   // sometimes is necessary to attach events listeners inside react scope
   // because, for instance, it depends on a state
@@ -20,7 +29,12 @@ const App = () => {
     window.addEventListener('message', (event) => {
       const message = event.data;
       if (message.command === 'update-ui') {
-        setDownloadLinks(message.downloadLinks);
+        setCredentials(message.credentials);
+
+        if (message.credentials !== null) {
+          setSectionContent(message.content);
+          setDownloadLinks(message.downloadLinks);
+        }
       }
     });
   }, []);
@@ -31,7 +45,65 @@ const App = () => {
       <vscode-button id="howdy" onClick={handleButtonClick}>
         Howdy!
       </vscode-button>
-      <section></section>
+
+      {credentials !== undefined &&
+        (credentials === null ? (
+          <LoginForm />
+        ) : (
+          <Dashboard
+            sectionContent={sectionContent!}
+            downloadLinks={downloadLinks!}
+          />
+        ))}
+    </div>
+  );
+};
+
+const LoginForm = () => {
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const get = (name: string) =>
+      (event.currentTarget.elements.namedItem(name) as HTMLInputElement).value;
+
+    const credentials = {
+      ip: get('ip'),
+      username: get('username'),
+      password: get('password'),
+    };
+
+    if (Object.values(credentials).every((c) => c !== '')) {
+      vscode.postMessage({
+        command: 'login',
+        credentials,
+      });
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <label htmlFor="ip">IP:</label>
+      <input type="text" id="ip" name="ip" />
+      <label htmlFor="username">Username:</label>
+      <input type="text" id="username" name="username" />
+      <label htmlFor="password">Password:</label>
+      <input type="password" id="password" name="password" />
+      <input type="submit" value="Log in" />
+    </form>
+  );
+};
+
+const Dashboard = ({ sectionContent, downloadLinks }: DashboardProps) => {
+  function handleLogoutButtonClick() {
+    vscode.postMessage({
+      command: 'logout',
+    });
+  }
+
+  return (
+    <>
+      <vscode-button onClick={handleLogoutButtonClick}>Log Out</vscode-button>
+      <section dangerouslySetInnerHTML={{ __html: sectionContent }}></section>
       {downloadLinks.map(({ name, url }) => {
         return (
           <p>
@@ -41,7 +113,7 @@ const App = () => {
           </p>
         );
       })}
-    </div>
+    </>
   );
 };
 
@@ -78,12 +150,4 @@ root.render(
 window.addEventListener('load', () => {
   console.log('loaded');
   vscode.postMessage({ command: 'loaded' });
-});
-
-window.addEventListener('message', (event) => {
-  const data = event.data;
-
-  if (data.command === 'update-ui') {
-    document.querySelector('section')!.innerHTML += data.content;
-  }
 });
