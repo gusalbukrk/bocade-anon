@@ -18,6 +18,8 @@
 		"jsx": "react",
 	},
 
-	// otherwise, error `'vite.config.ts' is not under 'rootDir'`
-	"exclude": ["./vite.config.mts", "src/test", "src/webview"],
+	"exclude": [
+		"./vite.config.mts", // fix `File '/vite.config.mts' is not under 'rootDir'`
+		"src/test"
+	],
 }

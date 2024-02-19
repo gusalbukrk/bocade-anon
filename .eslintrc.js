@@ -4,6 +4,7 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 6,
     sourceType: 'module',
+    project: './tsconfig.eslint.json',
   },
   plugins: ['@typescript-eslint'],
   rules: {
@@ -20,7 +21,10 @@ module.exports = {
     'no-throw-literal': 'warn',
     semi: 'off',
   },
-  ignorePatterns: ['out', 'dist', '**/*.d.ts'],
+
+  // dot files are ignored by default, `'!.*'` enables linting of dot files
+  ignorePatterns: ['out', 'dist', '**/*.d.ts', '!.*'],
+
   extends: [
     // sets up both `eslint-plugin-prettier` and `eslint-config-prettier`
     // should be the last item in the `extends` array

@@ -1,0 +1,17 @@
+// differently from the other tsconfig, this one includes all files in the project
+// otherwise would get the following error while running eslint in some files:
+// `Parsing error: ESLint was configured to run on ... using `parserOptions.project`:
+// <tsconfigRootDir>/tsconfig.eslint.json However, that TSConfig does not include this file.`
+{
+  "extends": "./tsconfig.json",
+
+  "compilerOptions": {
+    "rootDir": "."
+  },
+
+  "include": [ // default include is ["**/*"]
+    "**/*",
+    "**/.*" // include dotfiles (e.g. `.eslintrc.js`)
+  ],
+  "exclude": [],
+}
