@@ -1,5 +1,4 @@
-const esbuild = require('esbuild');
-const { build } = esbuild;
+import esbuild, { build } from 'esbuild';
 
 const baseConfig = {
   bundle: true,
@@ -21,7 +20,7 @@ const extensionConfig = {
 const plugins = [
   {
     name: 'my-plugin',
-    setup(build) {
+    setup(/** @type {import('esbuild').PluginBuild} */ build) {
       build.onEnd((result) => {
         console.log(result);
       });
@@ -37,7 +36,7 @@ const webviewConfig = {
   outfile: './out/webview.js',
 };
 
-(async () => {
+await (async () => {
   const args = process.argv.slice(2);
   try {
     if (args.includes('--watch')) {

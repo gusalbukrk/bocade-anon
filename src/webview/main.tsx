@@ -9,6 +9,13 @@ import { credentials } from '../utils/getCredentials.js';
 
 type downloadLinks = { name: string; url: string }[];
 
+type updateUIMessage = {
+  command: string;
+  credentials: credentials;
+  content?: string;
+  downloadLinks?: downloadLinks;
+};
+
 type DashboardProps = {
   sectionContent: string;
   downloadLinks: downloadLinks;
@@ -27,7 +34,7 @@ const App = () => {
   // empty array of deps means effect will only run once, after initial render
   useEffect(() => {
     window.addEventListener('message', (event) => {
-      const message = event.data;
+      const message = event.data as updateUIMessage;
       if (message.command === 'update-ui') {
         setCredentials(message.credentials);
 
@@ -51,8 +58,8 @@ const App = () => {
           <LoginForm />
         ) : (
           <Dashboard
-            sectionContent={sectionContent!}
-            downloadLinks={downloadLinks!}
+            sectionContent={sectionContent ?? ''}
+            downloadLinks={downloadLinks ?? []}
           />
         ))}
     </div>
@@ -140,12 +147,14 @@ function handleDownloadLinkClick(
   });
 }
 
-const root = createRoot(document.getElementById('root')!);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+const rootElement = document.getElementById('root');
+if (rootElement !== null) {
+  createRoot(rootElement).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
+}
 
 window.addEventListener('load', () => {
   console.log('loaded');

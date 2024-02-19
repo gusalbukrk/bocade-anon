@@ -1,4 +1,3 @@
-import { JSDOM } from 'jsdom';
 import path from 'node:path';
 import * as vscode from 'vscode';
 
@@ -10,6 +9,11 @@ import {
   download,
   storeCredentialsIfValid,
 } from '../utils/navigate';
+
+type message = { command: string };
+type howdyMessage = { command: 'howdy'; text: string };
+type loginMessage = { command: 'login'; credentials: credentials };
+type downloadMessage = { command: 'download'; name: string; url: string };
 
 export class HelloWorldPanel {
   public static currentPanel: HelloWorldPanel | undefined;
@@ -24,7 +28,13 @@ export class HelloWorldPanel {
   ) {
     this._panel = panel;
     this._globalState = globalState;
-    this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+    this._panel.onDidDispose(
+      () => {
+        this.dispose();
+      },
+      null,
+      this._disposables,
+    );
     this._panel.webview.html = this._getWebviewContent(
       this._panel.webview,
       extensionUri,
@@ -73,7 +83,10 @@ export class HelloWorldPanel {
     webview: vscode.Webview,
     extensionUri: vscode.Uri,
   ) {
-    const webviewUri = getUri(webview, extensionUri, ['out', 'webview.js']);
+    const webviewUri = getUri(webview, extensionUri, [
+      'out',
+      'webview.js',
+    ]).toString();
 
     const nonce = getNonce();
 
@@ -96,42 +109,49 @@ export class HelloWorldPanel {
 
   private _setWebviewMessageListener(webview: vscode.Webview) {
     webview.onDidReceiveMessage(
-      async (message: any) => {
+      async (message: message) => {
         switch (message.command) {
           case 'howdy': // howdy button was clicked
-            vscode.window.showInformationMessage(message.text);
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            vscode.window.showInformationMessage(
+              (message as howdyMessage).text,
+            );
             return;
           case 'loaded': // window on load event has just been triggered
-            updateUI(this._globalState, this._panel);
+            await updateUI(this._globalState, this._panel);
             return;
           case 'login': // login form has been submitted
             // log out (consequently, clear cookie jar) to assure
             // old credentials don't interfere with new credentials validation
             await getPageJSDOM('index.php', this._globalState);
 
-            const areCredentialsValid = await storeCredentialsIfValid(
-              message.credentials,
+            await storeCredentialsIfValid(
+              (message as loginMessage).credentials,
               this._globalState,
             );
-            updateUI(this._globalState, this._panel);
+            await updateUI(this._globalState, this._panel);
             return;
           case 'logout': // logout button was clicked
-            getPageJSDOM('index.php', this._globalState); // log out
-            this._globalState.update('credentials', undefined);
-            updateUI(this._globalState, this._panel);
+            await getPageJSDOM('index.php', this._globalState); // log out
+            await this._globalState.update('credentials', undefined);
+            await updateUI(this._globalState, this._panel);
             return;
           case 'download': // user clicked on a link to download a pdf
             const pathToSave =
               vscode.workspace.workspaceFolders === undefined
                 ? // if VS Code doesn't have a opened directory, save file in cwd
                   // (i.e. the directory from which VS Code was opened from)
-                  message.name
+                  (message as downloadMessage).name
                 : path.join(
                     vscode.workspace.workspaceFolders[0].uri.fsPath,
-                    message.name,
+                    (message as downloadMessage).name,
                   );
 
-            await download(message.url, pathToSave, this._globalState);
+            await download(
+              (message as downloadMessage).url,
+              pathToSave,
+              this._globalState,
+            );
 
             return;
         }
@@ -150,7 +170,7 @@ async function updateUI(
   const credentials = getCredentials(globalState, false);
 
   if (credentials === null) {
-    panel.webview.postMessage({
+    await panel.webview.postMessage({
       command: 'update-ui',
       credentials,
     });
@@ -161,7 +181,7 @@ async function updateUI(
     await getProblemPageTable(globalState);
   const runPageDownloadLinks = await getRunPageLinks(globalState);
 
-  panel.webview.postMessage({
+  await panel.webview.postMessage({
     command: 'update-ui',
     credentials,
     content: html,
@@ -170,12 +190,15 @@ async function updateUI(
 }
 
 async function getProblemPageTable(globalState: vscode.Memento) {
-  const ip = getCredentials(globalState)!.ip;
   const problemPageJSDOM = await getPageJSDOM('team/problem.php', globalState);
 
   const table = problemPageJSDOM.window.document.querySelector(
     'table:nth-of-type(3)',
-  )!;
+  );
+
+  if (table === null) {
+    throw new Error('no problems table found on problem.php');
+  }
 
   table.querySelectorAll('img').forEach((img) => {
     img.src = img.src;
@@ -189,14 +212,13 @@ async function getProblemPageTable(globalState: vscode.Memento) {
 }
 
 async function getRunPageLinks(globalState: vscode.Memento) {
-  const ip = getCredentials(globalState)!.ip;
   const runPageJSDOM = await getPageJSDOM('team/run.php', globalState);
 
   const links = [
     ...runPageJSDOM.window.document.querySelectorAll<HTMLAnchorElement>(
       'table:nth-of-type(3) a',
     ),
-  ].map((a) => ({ name: a.textContent!, url: a.href }));
+  ].map((a) => ({ name: a.text, url: a.href }));
 
   return links;
 }

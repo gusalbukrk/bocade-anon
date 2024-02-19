@@ -26,8 +26,20 @@ module.exports = {
   ignorePatterns: ['out', 'dist', '**/*.d.ts', '!.*'],
 
   extends: [
+    'plugin:@typescript-eslint/strict-type-checked',
+
     // sets up both `eslint-plugin-prettier` and `eslint-config-prettier`
     // should be the last item in the `extends` array
     'plugin:prettier/recommended',
+  ],
+
+  overrides: [
+    // // disable type-aware linting for JavaScript files
+    // // https://typescript-eslint.io/linting/typed-linting/#how-can-i-disable-type-aware-linting-for-a-subset-of-files
+    // // or use jsdoc type annotations to add type information to js files where needed
+    // {
+    //   extends: ['plugin:@typescript-eslint/disable-type-checked'],
+    //   files: ['./**/*.{js,mjs}'],
+    // },
   ],
 };

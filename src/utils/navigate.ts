@@ -22,16 +22,13 @@ async function getPageJSDOM(
   pagePath: string, // relative to `http://${credentials.ip}/boca/`
   globalState: vscode.Memento,
 ): Promise<JSDOM> {
-  const credentials = getCredentials(
-    globalState,
-    false,
-  ) as NonNullable<credentials> | null;
+  const credentials = getCredentials(globalState, false);
 
   if (credentials === null) {
     console.log('no credentials stored');
 
     // if there're no credentials stored, there should also not be a stored cookie jar
-    globalState.update('cookieJar', undefined);
+    await globalState.update('cookieJar', undefined);
 
     return new JSDOM();
   }
@@ -49,7 +46,7 @@ async function getPageJSDOM(
       console.log('user is already logged in with stored cookie jar');
 
       if (isLogoutPath(url)) {
-        globalState.update('cookieJar', undefined);
+        await globalState.update('cookieJar', undefined);
         console.log('logged out');
       }
 
@@ -61,14 +58,14 @@ async function getPageJSDOM(
         'user is not logged in with stored cookie jar, no need to log out',
       );
 
-      globalState.update('cookieJar', undefined);
+      await globalState.update('cookieJar', undefined);
 
       return pageJSDOM;
     }
 
     const loginSuccessful = await logIn(
       credentials,
-      getCookieFromCookieJarObj(storedCookieJarObj, 'PHPSESSID'),
+      getCookieFromCookieJarObj(storedCookieJarObj, 'PHPSESSID') as string,
       storedCookieJar,
     );
 
@@ -100,7 +97,7 @@ async function getPageJSDOM(
 
   const loginSuccessful = await logIn(
     credentials,
-    getCookieFromCookieJarObj(newCookieJarObj, 'PHPSESSID'),
+    getCookieFromCookieJarObj(newCookieJarObj, 'PHPSESSID') as string,
     newCookieJar,
   );
 
@@ -108,7 +105,7 @@ async function getPageJSDOM(
     throw new Error('login with newly created cookie jar failed');
   }
 
-  globalState.update('cookieJar', newCookieJarObj);
+  await globalState.update('cookieJar', newCookieJarObj);
 
   console.log('newly created/stored cookie jar was used to log in');
   return await JSDOM.fromURL(url, { cookieJar: newCookieJar });
@@ -119,7 +116,7 @@ async function download(
   pathToSave: string,
   globalState: vscode.Memento,
 ) {
-  const request = http.get(
+  http.get(
     url,
     {
       headers: {
@@ -145,6 +142,7 @@ async function download(
           responseHtml += chunk;
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
         response.on('end', async () => {
           if (!isLogged(responseHtml)) {
             console.log("tried to download a file, but user isn't logged in");
@@ -153,7 +151,7 @@ async function download(
             // as a consequence, user will get logged in
             await getPageJSDOM('team/index.php', globalState);
 
-            return await download(url, pathToSave, globalState);
+            await download(url, pathToSave, globalState);
           }
 
           throw new Error(
@@ -211,14 +209,14 @@ async function storeCredentialsIfValid(
     return false;
   }
 
-  globalState.update('credentials', credentials);
+  await globalState.update('credentials', credentials);
 
   try {
     // getPageJSDOM throws error if login fails; although, it's also possible it throws other errors
     // in any case, if it throws, it means credentials are invalid
     await getPageJSDOM('team/index.php', globalState);
   } catch (e: unknown) {
-    globalState.update('credentials', undefined);
+    await globalState.update('credentials', undefined);
     console.log("couldn't log in with given credentials");
     return false;
   }
@@ -235,13 +233,17 @@ async function getCookieString(globalState: vscode.Memento) {
     // as a consequence, user will get logged in
     await getPageJSDOM('team/index.php', globalState);
 
-    cookieJarObj = globalState.get<cookieJarObj>('cookieJar')!;
+    cookieJarObj = globalState.get<cookieJarObj>('cookieJar');
+
+    if (cookieJarObj === undefined) {
+      throw new Error('no cookie jar stored');
+    }
   }
 
   const cookieJar = convertCookieJarObjToCookieJar(cookieJarObj);
 
   const cookieString = cookieJar.getCookieStringSync(
-    generateBOCAURL(getCredentials(globalState)!, ''),
+    generateBOCAURL(getCredentials(globalState), ''),
   );
 
   return cookieString;
@@ -253,7 +255,10 @@ function isLogged(pageHtml: string) {
   );
 }
 
-function getCookieFromCookieJarObj(cookieJarObj: cookieJarObj, key: string) {
+function getCookieFromCookieJarObj(
+  cookieJarObj: cookieJarObj,
+  key: string,
+): unknown {
   return cookieJarObj.cookies.find((cookie) => cookie.key === key)?.value;
 }
 
@@ -261,6 +266,7 @@ function convertCookieJarObjToCookieJar(cookieJarObj: cookieJarObj) {
   return jsdom.toughCookie.CookieJar.fromJSON(JSON.stringify(cookieJarObj));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function printCookieJar(cookieJar: jsdom.CookieJar) {
   const cookieJarObj = cookieJar.toJSON();
   console.log(JSON.stringify(cookieJarObj));

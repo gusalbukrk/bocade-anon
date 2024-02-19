@@ -17,6 +17,14 @@ type credentials =
 // places where it's expected to have credentials stored
 function getCredentials(
   globalState: vscode.Memento,
+  throwError?: true,
+): NonNullable<credentials>;
+function getCredentials(
+  globalState: vscode.Memento,
+  throwError: false,
+): NonNullable<credentials> | null;
+function getCredentials(
+  globalState: vscode.Memento,
   throwError: boolean = true,
 ) {
   const credentials = globalState.get<credentials>('credentials', null);
