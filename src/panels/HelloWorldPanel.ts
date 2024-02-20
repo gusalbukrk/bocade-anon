@@ -125,20 +125,20 @@ export class HelloWorldPanel {
             // old credentials don't interfere with new credentials validation
             await getPageJSDOM('index.php', this._globalState);
 
-            const areCredentialsValid = await storeCredentialsIfValid(
+            const errorObject = await storeCredentialsIfValid(
               (message as loginMessage).credentials,
               this._globalState,
             );
 
             await updateUI(this._globalState, this._panel);
 
-            if (areCredentialsValid) {
+            if (errorObject === null) {
               // eslint-disable-next-line @typescript-eslint/no-floating-promises
               vscode.window.showInformationMessage('Logged in successfully!');
             } else {
               // eslint-disable-next-line @typescript-eslint/no-floating-promises
               vscode.window.showErrorMessage(
-                'Invalid credentials. Please try again.',
+                `Login failed. Reason: ${errorObject.message}. Please try again.`,
               );
             }
 

@@ -167,11 +167,12 @@ function generateBOCAURL(credentials: NonNullable<credentials>, path: string) {
   return `http://${credentials.ip}/boca/${path}`;
 }
 
+type errorObject = { message: string };
 // returns boolean indicating if credentials are valid
 async function storeCredentialsIfValid(
   credentials: credentials,
   globalState: vscode.Memento,
-) {
+): Promise<errorObject | null> {
   console.log(
     `checking if credentials are valid: ${JSON.stringify(credentials)}`,
   );
@@ -181,8 +182,7 @@ async function storeCredentialsIfValid(
     credentials === null ||
     Object.values(credentials).some((c) => c === '')
   ) {
-    console.log('credentials are in invalid format');
-    return false;
+    return { message: 'credentials are in an invalid format' };
   }
 
   let html;
@@ -194,8 +194,7 @@ async function storeCredentialsIfValid(
       })
     ).text();
   } catch (e) {
-    console.log('`credentials.ip` is unreachable');
-    return false;
+    return { message: 'IP is unreachable' };
   }
 
   const dom = new JSDOM(html);
@@ -205,8 +204,7 @@ async function storeCredentialsIfValid(
     );
 
   if (!isBOCAIndexPage) {
-    console.log('`credentials.ip` is not a BOCA server');
-    return false;
+    return { message: "IP doesn't point to a BOCA server" };
   }
 
   await globalState.update('credentials', credentials);
@@ -217,12 +215,10 @@ async function storeCredentialsIfValid(
     await getPageJSDOM('team/index.php', globalState);
   } catch (e: unknown) {
     await globalState.update('credentials', undefined);
-    console.log("couldn't log in with given credentials");
-    return false;
+    return { message: 'invalid credentials' };
   }
 
-  console.log('credentials are valid');
-  return true;
+  return null;
 }
 
 async function getCookieString(globalState: vscode.Memento) {
