@@ -18,16 +18,16 @@ type downloadMessage = { command: 'download'; name: string; url: string };
 export class HelloWorldPanel {
   public static currentPanel: HelloWorldPanel | undefined;
   private readonly _panel: vscode.WebviewPanel;
-  private readonly _globalState: vscode.Memento;
+  private readonly _secrets: vscode.SecretStorage;
   private _disposables: vscode.Disposable[] = [];
 
   private constructor(
     panel: vscode.WebviewPanel,
-    globalState: vscode.Memento,
+    secrets: vscode.SecretStorage,
     extensionUri: vscode.Uri,
   ) {
     this._panel = panel;
-    this._globalState = globalState;
+    this._secrets = secrets;
     this._panel.onDidDispose(
       () => {
         this.dispose();
@@ -42,7 +42,10 @@ export class HelloWorldPanel {
     this._setWebviewMessageListener(this._panel.webview);
   }
 
-  public static render(extensionUri: vscode.Uri, globalState: vscode.Memento) {
+  public static render(
+    extensionUri: vscode.Uri,
+    secrets: vscode.SecretStorage,
+  ) {
     if (HelloWorldPanel.currentPanel) {
       HelloWorldPanel.currentPanel._panel.reveal(vscode.ViewColumn.One);
     } else {
@@ -60,7 +63,7 @@ export class HelloWorldPanel {
 
       HelloWorldPanel.currentPanel = new HelloWorldPanel(
         panel,
-        globalState,
+        secrets,
         extensionUri,
       );
     }
@@ -118,19 +121,19 @@ export class HelloWorldPanel {
             );
             return;
           case 'loaded': // window on load event has just been triggered
-            await updateUI(this._globalState, this._panel);
+            await updateUI(this._secrets, this._panel);
             return;
           case 'login': // login form has been submitted
             // log out (consequently, clear cookie jar) to assure
             // old credentials don't interfere with new credentials validation
-            await getPageJSDOM('index.php', this._globalState);
+            await getPageJSDOM('index.php', this._secrets);
 
             const errorObject = await storeCredentialsIfValid(
               (message as loginMessage).credentials,
-              this._globalState,
+              this._secrets,
             );
 
-            await updateUI(this._globalState, this._panel);
+            await updateUI(this._secrets, this._panel);
 
             if (errorObject === null) {
               // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -148,9 +151,9 @@ export class HelloWorldPanel {
 
             return;
           case 'logout': // logout button was clicked
-            await getPageJSDOM('index.php', this._globalState); // log out
-            await this._globalState.update('credentials', undefined);
-            await updateUI(this._globalState, this._panel);
+            await getPageJSDOM('index.php', this._secrets); // log out
+            await this._secrets.delete('credentials');
+            await updateUI(this._secrets, this._panel);
             return;
           case 'download': // user clicked on a link to download a pdf
             const pathToSave =
@@ -166,7 +169,7 @@ export class HelloWorldPanel {
             await download(
               (message as downloadMessage).url,
               pathToSave,
-              this._globalState,
+              this._secrets,
             );
 
             return;
@@ -180,10 +183,10 @@ export class HelloWorldPanel {
 
 // if there're stored credentials, fetch data from BOCA and send it to the webview
 async function updateUI(
-  globalState: vscode.Memento,
+  secrets: vscode.SecretStorage,
   panel: vscode.WebviewPanel,
 ) {
-  const credentials = getCredentials(globalState, false);
+  const credentials = await getCredentials(secrets, false);
 
   if (credentials === null) {
     await panel.webview.postMessage({
@@ -193,9 +196,8 @@ async function updateUI(
     return;
   }
 
-  const [html, problemPageDownloadLinks] =
-    await getProblemPageTable(globalState);
-  const runPageDownloadLinks = await getRunPageLinks(globalState);
+  const [html, problemPageDownloadLinks] = await getProblemPageTable(secrets);
+  const runPageDownloadLinks = await getRunPageLinks(secrets);
 
   await panel.webview.postMessage({
     command: 'update-ui',
@@ -205,8 +207,8 @@ async function updateUI(
   });
 }
 
-async function getProblemPageTable(globalState: vscode.Memento) {
-  const problemPageJSDOM = await getPageJSDOM('team/problem.php', globalState);
+async function getProblemPageTable(secrets: vscode.SecretStorage) {
+  const problemPageJSDOM = await getPageJSDOM('team/problem.php', secrets);
 
   const table = problemPageJSDOM.window.document.querySelector(
     'table:nth-of-type(3)',
@@ -227,8 +229,8 @@ async function getProblemPageTable(globalState: vscode.Memento) {
   return [table.outerHTML, pdfs];
 }
 
-async function getRunPageLinks(globalState: vscode.Memento) {
-  const runPageJSDOM = await getPageJSDOM('team/run.php', globalState);
+async function getRunPageLinks(secrets: vscode.SecretStorage) {
+  const runPageJSDOM = await getPageJSDOM('team/run.php', secrets);
 
   const links = [
     ...runPageJSDOM.window.document.querySelectorAll<HTMLAnchorElement>(

@@ -20,24 +20,25 @@ logging in is an action performed internally by this function
 when it needs to get a page which requires authentication and user isn't yet logged in */
 async function getPageJSDOM(
   pagePath: string, // relative to `http://${credentials.ip}/boca/`
-  globalState: vscode.Memento,
+  secrets: vscode.SecretStorage,
 ): Promise<JSDOM> {
-  const credentials = getCredentials(globalState, false);
+  const credentials = await getCredentials(secrets, false);
 
   if (credentials === null) {
     console.log('no credentials stored');
 
     // if there're no credentials stored, there should also not be a stored cookie jar
-    await globalState.update('cookieJar', undefined);
+    await secrets.delete('cookieJar');
 
     return new JSDOM();
   }
 
   const url = generateBOCAURL(credentials, pagePath);
 
-  const storedCookieJarObj = globalState.get<cookieJarObj>('cookieJar');
+  const storedCookieJarStr = await secrets.get('cookieJar');
 
-  if (storedCookieJarObj !== undefined) {
+  if (storedCookieJarStr !== undefined) {
+    const storedCookieJarObj = JSON.parse(storedCookieJarStr) as cookieJarObj;
     const storedCookieJar = convertCookieJarObjToCookieJar(storedCookieJarObj);
 
     const pageJSDOM = await JSDOM.fromURL(url, { cookieJar: storedCookieJar });
@@ -46,7 +47,7 @@ async function getPageJSDOM(
       console.log('user is already logged in with stored cookie jar');
 
       if (isLogoutPath(url)) {
-        await globalState.update('cookieJar', undefined);
+        await secrets.delete('cookieJar');
         console.log('logged out');
       }
 
@@ -58,7 +59,7 @@ async function getPageJSDOM(
         'user is not logged in with stored cookie jar, no need to log out',
       );
 
-      await globalState.update('cookieJar', undefined);
+      await secrets.delete('cookieJar');
 
       return pageJSDOM;
     }
@@ -105,7 +106,7 @@ async function getPageJSDOM(
     throw new Error('login with newly created cookie jar failed');
   }
 
-  await globalState.update('cookieJar', newCookieJarObj);
+  await secrets.store('cookieJar', JSON.stringify(newCookieJarObj));
 
   console.log('newly created/stored cookie jar was used to log in');
   return await JSDOM.fromURL(url, { cookieJar: newCookieJar });
@@ -114,13 +115,13 @@ async function getPageJSDOM(
 async function download(
   url: string,
   pathToSave: string,
-  globalState: vscode.Memento,
+  secrets: vscode.SecretStorage,
 ) {
   http.get(
     url,
     {
       headers: {
-        cookie: await getCookieString(globalState),
+        cookie: await getCookieString(secrets),
       },
     },
     function (response) {
@@ -149,9 +150,9 @@ async function download(
 
             // navigate to a page which requires authentication
             // as a consequence, user will get logged in
-            await getPageJSDOM('team/index.php', globalState);
+            await getPageJSDOM('team/index.php', secrets);
 
-            await download(url, pathToSave, globalState);
+            await download(url, pathToSave, secrets);
           }
 
           throw new Error(
@@ -171,7 +172,7 @@ type errorObject = { message: string };
 // returns boolean indicating if credentials are valid
 async function storeCredentialsIfValid(
   credentials: credentials,
-  globalState: vscode.Memento,
+  secrets: vscode.SecretStorage,
 ): Promise<errorObject | null> {
   console.log(
     `checking if credentials are valid: ${JSON.stringify(credentials)}`,
@@ -207,39 +208,45 @@ async function storeCredentialsIfValid(
     return { message: "IP doesn't point to a BOCA server" };
   }
 
-  await globalState.update('credentials', credentials);
+  await secrets.store('credentials', JSON.stringify(credentials));
 
   try {
     // getPageJSDOM throws error if login fails; although, it's also possible it throws other errors
     // in any case, if it throws, it means credentials are invalid
-    await getPageJSDOM('team/index.php', globalState);
+    await getPageJSDOM('team/index.php', secrets);
   } catch (e: unknown) {
-    await globalState.update('credentials', undefined);
+    await secrets.delete('credentials');
     return { message: 'invalid credentials' };
   }
 
   return null;
 }
 
-async function getCookieString(globalState: vscode.Memento) {
-  let cookieJarObj = globalState.get<cookieJarObj>('cookieJar');
+async function getCookieString(secrets: vscode.SecretStorage) {
+  let cookieJarStr = await secrets.get('cookieJar');
+  let cookieJarObj =
+    cookieJarStr !== undefined
+      ? (JSON.parse(cookieJarStr) as cookieJarObj)
+      : undefined;
 
   if (cookieJarObj === undefined) {
     // navigate to a page which requires authentication
     // as a consequence, user will get logged in
-    await getPageJSDOM('team/index.php', globalState);
+    await getPageJSDOM('team/index.php', secrets);
 
-    cookieJarObj = globalState.get<cookieJarObj>('cookieJar');
+    cookieJarStr = await secrets.get('cookieJar');
 
-    if (cookieJarObj === undefined) {
+    if (cookieJarStr === undefined) {
       throw new Error('no cookie jar stored');
     }
+
+    cookieJarObj = JSON.parse(cookieJarStr) as cookieJarObj;
   }
 
   const cookieJar = convertCookieJarObjToCookieJar(cookieJarObj);
 
   const cookieString = cookieJar.getCookieStringSync(
-    generateBOCAURL(getCredentials(globalState), ''),
+    generateBOCAURL(await getCredentials(secrets), ''),
   );
 
   return cookieString;

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 // there're 3 possible values for the credentials:
 // - undefined: during initial React render when state hasn't been set yet
-// - null: user is not logged in (globalState.get('credentials') === undefined)
+// - null: user is not logged in (secrets.get('credentials') === undefined)
 // - object: user is logged
 type credentials =
   | undefined
@@ -15,23 +15,28 @@ type credentials =
 
 // this function is ran with throwError set to true in
 // places where it's expected to have credentials stored
-function getCredentials(
-  globalState: vscode.Memento,
+async function getCredentials(
+  secrets: vscode.SecretStorage,
   throwError?: true,
-): NonNullable<credentials>;
-function getCredentials(
-  globalState: vscode.Memento,
+): Promise<NonNullable<credentials>>;
+async function getCredentials(
+  secrets: vscode.SecretStorage,
   throwError: false,
-): NonNullable<credentials> | null;
-function getCredentials(
-  globalState: vscode.Memento,
+): Promise<NonNullable<credentials> | null>;
+async function getCredentials(
+  secrets: vscode.SecretStorage,
   throwError: boolean = true,
 ) {
-  const credentials = globalState.get<credentials>('credentials', null);
+  const credentialsStr = (await secrets.get('credentials')) ?? null;
 
-  if (throwError && credentials === null) {
+  if (throwError && credentialsStr === null) {
     throw new Error("there're no credentials stored");
   }
+
+  const credentials =
+    credentialsStr !== null
+      ? (JSON.parse(credentialsStr) as credentials)
+      : null;
 
   return credentials;
 }
