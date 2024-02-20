@@ -67,8 +67,21 @@ const App = () => {
 };
 
 const LoginForm = () => {
+  const [isLoginInProgress, setIsLoginInProgress] = useState(false);
+
+  useEffect(() => {
+    window.addEventListener('message', (event) => {
+      const message = event.data as { command: string };
+      if (message.command === 'login-finished') {
+        setIsLoginInProgress(false);
+      }
+    });
+  }, []);
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    setIsLoginInProgress(true);
 
     const get = (name: string) =>
       (event.currentTarget.elements.namedItem(name) as HTMLInputElement).value;
@@ -95,7 +108,7 @@ const LoginForm = () => {
       <input type="text" id="username" name="username" />
       <label htmlFor="password">Password:</label>
       <input type="password" id="password" name="password" />
-      <input type="submit" value="Log in" />
+      <input type="submit" value="Log in" disabled={isLoginInProgress} />
     </form>
   );
 };
