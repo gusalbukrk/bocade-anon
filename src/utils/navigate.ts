@@ -44,7 +44,7 @@ async function getPageJSDOM(
     const pageJSDOM = await JSDOM.fromURL(url, { cookieJar: storedCookieJar });
 
     if (isLogoutPath(url)) {
-      // in BOCA web dashboard, log out is accomplished by visiting index page
+      // in BOCA web dashboard, log out is triggered by visiting index page when user is logged in
       // in the extension, it's also necessary to clear stored data
       await secrets.delete('credentials');
       await secrets.delete('cookieJar');
@@ -303,4 +303,12 @@ function isLogoutPath(path: string) {
   return path === '' || path === 'index.php';
 }
 
-export { getPageJSDOM, download, storeCredentialsIfValid };
+/** navigate to BOCA index page (which triggers session logout if user is logged in)
+and clear extension stored data */
+async function logOut(secrets: vscode.SecretStorage) {
+  // see getPageJSDOM comment to understand why a request to index page
+  // is assumed to be a request for logging out
+  return await getPageJSDOM('index.php', secrets);
+}
+
+export { getPageJSDOM, download, storeCredentialsIfValid, logOut };

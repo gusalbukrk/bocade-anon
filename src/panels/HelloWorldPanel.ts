@@ -8,6 +8,7 @@ import {
   getPageJSDOM,
   download,
   storeCredentialsIfValid,
+  logOut,
 } from '../utils/navigate';
 
 type message = { command: string };
@@ -124,9 +125,8 @@ export class HelloWorldPanel {
             await updateUI(this._secrets, this._panel);
             return;
           case 'login': // login form has been submitted
-            // log out (consequently, clear stored data) to assure
-            // old credentials don't interfere with new credentials validation
-            await getPageJSDOM('index.php', this._secrets);
+            // assuring old credentials don't interfere with new credentials validation
+            await logOut(this._secrets);
 
             const errorObject = await storeCredentialsIfValid(
               (message as loginMessage).credentials,
@@ -151,7 +151,7 @@ export class HelloWorldPanel {
 
             return;
           case 'logout': // logout button was clicked
-            await getPageJSDOM('index.php', this._secrets); // log out
+            await logOut(this._secrets);
             await updateUI(this._secrets, this._panel);
             return;
           case 'download': // user clicked on a link to download a pdf
