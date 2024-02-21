@@ -4,12 +4,7 @@ import * as vscode from 'vscode';
 import getCredentials, { credentials } from '../utils/getCredentials';
 import { getUri } from '../utils/getUri';
 import { getNonce } from '../utils/getNonce';
-import {
-  getPageJSDOM,
-  download,
-  storeCredentialsIfValid,
-  logOut,
-} from '../utils/navigate';
+import { logIn, logOut, getPageJSDOM, download } from '../utils/navigate';
 
 type message = { command: string };
 type howdyMessage = { command: 'howdy'; text: string };
@@ -125,10 +120,7 @@ export class HelloWorldPanel {
             await updateUI(this._secrets, this._panel);
             return;
           case 'login': // login form has been submitted
-            // assuring old credentials don't interfere with new credentials validation
-            await logOut(this._secrets);
-
-            const errorObject = await storeCredentialsIfValid(
+            const errorObject = await logIn(
               (message as loginMessage).credentials,
               this._secrets,
             );
@@ -180,7 +172,10 @@ export class HelloWorldPanel {
   }
 }
 
-// if there're stored credentials, fetch data from BOCA and send it to the webview
+/**
+ * post `update-ui` event to the webview; additionally,
+ * if there're credentials stored, send some data for the webview to display
+ */
 async function updateUI(
   secrets: vscode.SecretStorage,
   panel: vscode.WebviewPanel,
@@ -238,4 +233,12 @@ async function getRunPageLinks(secrets: vscode.SecretStorage) {
   ].map((a) => ({ name: a.text, url: a.href }));
 
   return links;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function inspectSecretStorage(secrets: vscode.SecretStorage) {
+  console.log({
+    credentials: await secrets.get('credentials'),
+    cookieJar: await secrets.get('cookieJar'),
+  });
 }

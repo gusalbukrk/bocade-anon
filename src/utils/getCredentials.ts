@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
 
-// there're 3 possible values for the credentials:
-// - undefined: during initial React render when state hasn't been set yet
-// - null: user is not logged in (secrets.get('credentials') === undefined)
-// - object: user is logged
+/**
+ * There're 3 possible values for the credentials:
+ * - undefined: during initial React render when state hasn't been set yet
+ * - null: user is not logged in (secrets.get('credentials') === undefined)
+ * - object: user is logged in
+ */
 type credentials =
   | undefined
   | null
@@ -13,8 +15,10 @@ type credentials =
       password: string;
     };
 
-// this function is ran with throwError set to true in
-// places where it's expected to have credentials stored
+/**
+ *
+ * @param throwError must be set to true if the credentials are expected to be stored
+ */
 async function getCredentials(
   secrets: vscode.SecretStorage,
   throwError?: true,
