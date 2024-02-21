@@ -43,24 +43,22 @@ async function getPageJSDOM(
 
     const pageJSDOM = await JSDOM.fromURL(url, { cookieJar: storedCookieJar });
 
-    if (isLogged(pageJSDOM.serialize())) {
-      console.log('user is already logged in with stored cookie jar');
+    if (isLogoutPath(url)) {
+      // in BOCA web dashboard, log out is accomplished by visiting index page
+      // in the extension, it's also necessary to clear stored data
+      await secrets.delete('credentials');
+      await secrets.delete('cookieJar');
 
-      if (isLogoutPath(url)) {
-        await secrets.delete('cookieJar');
-        console.log('logged out');
-      }
+      console.log(
+        `user ${isLogged(pageJSDOM.serialize()) ? 'was' : "wasn't"} logged in with stored cookie jar`,
+      );
 
+      console.log('user logged out successfully');
       return pageJSDOM;
     }
 
-    if (isLogoutPath(url)) {
-      console.log(
-        'user is not logged in with stored cookie jar, no need to log out',
-      );
-
-      await secrets.delete('cookieJar');
-
+    if (isLogged(pageJSDOM.serialize())) {
+      console.log('user is already logged in with stored cookie jar');
       return pageJSDOM;
     }
 

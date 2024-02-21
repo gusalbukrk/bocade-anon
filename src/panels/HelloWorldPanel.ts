@@ -124,7 +124,7 @@ export class HelloWorldPanel {
             await updateUI(this._secrets, this._panel);
             return;
           case 'login': // login form has been submitted
-            // log out (consequently, clear cookie jar) to assure
+            // log out (consequently, clear stored data) to assure
             // old credentials don't interfere with new credentials validation
             await getPageJSDOM('index.php', this._secrets);
 
@@ -152,7 +152,6 @@ export class HelloWorldPanel {
             return;
           case 'logout': // logout button was clicked
             await getPageJSDOM('index.php', this._secrets); // log out
-            await this._secrets.delete('credentials');
             await updateUI(this._secrets, this._panel);
             return;
           case 'download': // user clicked on a link to download a pdf
