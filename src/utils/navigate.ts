@@ -56,14 +56,14 @@ async function getPageJSDOM(
       await secrets.delete('cookieJar');
 
       console.log(
-        `user ${isLogged(pageJSDOM.serialize()) ? 'was' : "wasn't"} logged in with stored cookie jar`,
+        `user ${isAuthenticatedInBOCA(pageJSDOM.serialize()) ? 'was' : "wasn't"} logged in with stored cookie jar`,
       );
 
       console.log('user logged out successfully');
       return pageJSDOM;
     }
 
-    if (isLogged(pageJSDOM.serialize())) {
+    if (isAuthenticatedInBOCA(pageJSDOM.serialize())) {
       console.log('user is already logged in with stored cookie jar');
       return pageJSDOM;
     }
@@ -150,7 +150,7 @@ async function download(
 
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         response.on('end', async () => {
-          if (!isLogged(responseHtml)) {
+          if (!isAuthenticatedInBOCA(responseHtml)) {
             console.log("tried to download a file, but user isn't logged in");
 
             // navigate to a page which requires authentication
@@ -271,7 +271,7 @@ async function getCookieString(secrets: vscode.SecretStorage) {
   return cookieString;
 }
 
-function isLogged(pageHtml: string) {
+function isAuthenticatedInBOCA(pageHtml: string) {
   return !pageHtml.includes(
     "alert('Session expired. You must log in again.');",
   );
