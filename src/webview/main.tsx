@@ -4,13 +4,18 @@ import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 
 import { credentials } from '../utils/getCredentials.js';
 
+import { getProblems } from '../utils/getData.js';
+
 type downloadLinks = { name: string; url: string }[];
+
+type problems = Awaited<ReturnType<typeof getProblems>>;
 
 type updateUIMessage = {
   command: string;
   credentials: credentials;
   content?: string;
   downloadLinks?: downloadLinks;
+  problems?: problems;
 };
 
 type DashboardProps = {
@@ -22,6 +27,7 @@ const App = () => {
   const [credentials, setCredentials] = useState<credentials>();
   const [sectionContent, setSectionContent] = useState<string>();
   const [downloadLinks, setDownloadLinks] = useState<downloadLinks>();
+  const [problems, setProblems] = useState<problems>();
 
   // sometimes is necessary to attach events listeners inside react scope
   // because, for instance, it depends on a state
@@ -36,6 +42,7 @@ const App = () => {
         if (message.credentials !== null) {
           setSectionContent(message.content);
           setDownloadLinks(message.downloadLinks);
+          setProblems(message.problems);
         }
       }
     });
@@ -52,10 +59,20 @@ const App = () => {
         (credentials === null ? (
           <LoginForm />
         ) : (
-          <Dashboard
-            sectionContent={sectionContent ?? ''}
-            downloadLinks={downloadLinks ?? []}
-          />
+          <>
+            <Dashboard
+              sectionContent={sectionContent ?? ''}
+              downloadLinks={downloadLinks ?? []}
+            />
+            <table>
+              {/* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */}
+              {problems!.map((problem) => (
+                <tr>
+                  <td>{problem.name}</td>
+                </tr>
+              ))}
+            </table>
+          </>
         ))}
     </div>
   );
