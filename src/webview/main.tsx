@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import {
-  provideVSCodeDesignSystem,
-  vsCodeButton,
-} from '@vscode/webview-ui-toolkit';
+import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 
 import { credentials } from '../utils/getCredentials.js';
 
@@ -20,8 +17,6 @@ type DashboardProps = {
   sectionContent: string;
   downloadLinks: downloadLinks;
 };
-
-provideVSCodeDesignSystem().register(vsCodeButton());
 
 const App = () => {
   const [credentials, setCredentials] = useState<credentials>();
@@ -49,9 +44,9 @@ const App = () => {
   return (
     <div>
       <h2>Hello, world!</h2>
-      <vscode-button id="howdy" onClick={handleButtonClick}>
+      <VSCodeButton id="howdy" onClick={handleButtonClick}>
         Howdy!
-      </vscode-button>
+      </VSCodeButton>
 
       {credentials !== undefined &&
         (credentials === null ? (
@@ -122,7 +117,7 @@ const Dashboard = ({ sectionContent, downloadLinks }: DashboardProps) => {
 
   return (
     <>
-      <vscode-button onClick={handleLogoutButtonClick}>Log Out</vscode-button>
+      <VSCodeButton onClick={handleLogoutButtonClick}>Log Out</VSCodeButton>
       <section dangerouslySetInnerHTML={{ __html: sectionContent }}></section>
       {downloadLinks.map(({ name, url }) => {
         return (
