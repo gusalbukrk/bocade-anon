@@ -5,6 +5,7 @@ import getCredentials, { credentials } from '../utils/getCredentials';
 import { getUri } from '../utils/getUri';
 import { getNonce } from '../utils/getNonce';
 import { logIn, logOut, getPageJSDOM, download } from '../utils/navigate';
+import { getClarifications, getProblems, getRuns } from '../utils/getData';
 
 type message = { command: string };
 type howdyMessage = { command: 'howdy'; text: string };
@@ -189,6 +190,10 @@ async function updateUI(
     });
     return;
   }
+
+  console.log(await getProblems(secrets));
+  console.log(await getRuns(secrets));
+  console.log(await getClarifications(secrets));
 
   const [html, problemPageDownloadLinks] = await getProblemPageTable(secrets);
   const runPageDownloadLinks = await getRunPageLinks(secrets);
