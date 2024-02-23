@@ -2,6 +2,11 @@ import * as vscode from 'vscode';
 import { getPageJSDOM } from '../utils/navigate';
 import getCredentials from './getCredentials';
 
+type problems = Awaited<ReturnType<typeof getProblems>>;
+type runs = Awaited<ReturnType<typeof getRuns>>;
+type clarifications = Awaited<ReturnType<typeof getClarifications>>;
+type score = Awaited<ReturnType<typeof getScore>>;
+
 async function getProblems(secrets: vscode.SecretStorage) {
   const problemsPageJSDOM = await getPageJSDOM('team/problem.php', secrets);
 
@@ -71,7 +76,7 @@ async function getRuns(secrets: vscode.SecretStorage) {
       time: tds[1].textContent,
       problem: tds[2].textContent,
       language: tds[3].textContent,
-      answer: tds[4].textContent,
+      answer: tds[4].textContent?.trim(), // it has trailing space when is 'YES'
       file: {
         name: tds[5].querySelector('a')?.textContent?.trim(),
         href:
@@ -114,4 +119,57 @@ async function getClarifications(secrets: vscode.SecretStorage) {
   return clarifications;
 }
 
-export { getProblems, getRuns, getClarifications };
+async function getScore(secrets: vscode.SecretStorage) {
+  const scorePageJSDOM = await getPageJSDOM('team/score.php', secrets);
+
+  const scoreTableRows = [
+    ...scorePageJSDOM.window.document.querySelectorAll(
+      'table:nth-of-type(3) tr',
+    ),
+  ];
+
+  // https://github.com/cassiopc/boca/blob/master/src/scoretable.php
+  if (scoreTableRows.length === 1) {
+    return [];
+  }
+
+  const ip = (await getCredentials(secrets)).ip;
+
+  const score = scoreTableRows.slice(1).map((tr) => {
+    const tds = [...tr.querySelectorAll('td')];
+
+    return {
+      position: tds[0].textContent,
+      usersite: tds[1].textContent,
+      name: tds[2].textContent,
+      problems: tds.slice(3, tds.length - 1).map((problem) => {
+        const text = problem.textContent?.trim(); // will be empty if team hasn't solved the problem
+        const img = problem.querySelector('img');
+
+        return {
+          text,
+          ...(text !== undefined && text.length > 0
+            ? {
+                balloon: `http://${ip}${img?.getAttribute('src') ?? ''}`,
+                color: img?.getAttribute('alt')?.replace(/:$/, ''),
+              }
+            : { balloon: undefined, color: undefined }),
+        };
+      }),
+      total: tds[tds.length - 1].textContent,
+    };
+  });
+
+  return score;
+}
+
+export {
+  problems,
+  getProblems,
+  runs,
+  getRuns,
+  clarifications,
+  getClarifications,
+  score,
+  getScore,
+};

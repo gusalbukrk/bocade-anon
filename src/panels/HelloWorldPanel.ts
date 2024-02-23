@@ -4,8 +4,13 @@ import * as vscode from 'vscode';
 import getCredentials, { credentials } from '../utils/getCredentials';
 import { getUri } from '../utils/getUri';
 import { getNonce } from '../utils/getNonce';
-import { logIn, logOut, getPageJSDOM, download } from '../utils/navigate';
-import { getProblems } from '../utils/getData';
+import { logIn, logOut, download } from '../utils/navigate';
+import {
+  getProblems,
+  getRuns,
+  getClarifications,
+  getScore,
+} from '../utils/getData';
 
 type message = { command: string };
 type howdyMessage = { command: 'howdy'; text: string };
@@ -192,54 +197,18 @@ async function updateUI(
   }
 
   const problems = await getProblems(secrets);
-  // console.log(await getProblems(secrets));
-  // console.log(await getRuns(secrets));
-  // console.log(await getClarifications(secrets));
-
-  const [html, problemPageDownloadLinks] = await getProblemPageTable(secrets);
-  const runPageDownloadLinks = await getRunPageLinks(secrets);
+  const runs = await getRuns(secrets);
+  const clarifications = await getClarifications(secrets);
+  const score = await getScore(secrets);
 
   await panel.webview.postMessage({
     command: 'update-ui',
     credentials,
-    content: html,
-    downloadLinks: [...problemPageDownloadLinks, ...runPageDownloadLinks],
     problems,
+    runs,
+    clarifications,
+    score,
   });
-}
-
-async function getProblemPageTable(secrets: vscode.SecretStorage) {
-  const problemPageJSDOM = await getPageJSDOM('team/problem.php', secrets);
-
-  const table = problemPageJSDOM.window.document.querySelector(
-    'table:nth-of-type(3)',
-  );
-
-  if (table === null) {
-    throw new Error('no problems table found on problem.php');
-  }
-
-  table.querySelectorAll('img').forEach((img) => {
-    img.src = img.src;
-  });
-
-  const pdfs = [...table.querySelectorAll('a')].map((a) => {
-    return { name: a.textContent, url: a.href };
-  });
-
-  return [table.outerHTML, pdfs];
-}
-
-async function getRunPageLinks(secrets: vscode.SecretStorage) {
-  const runPageJSDOM = await getPageJSDOM('team/run.php', secrets);
-
-  const links = [
-    ...runPageJSDOM.window.document.querySelectorAll<HTMLAnchorElement>(
-      'table:nth-of-type(3) a',
-    ),
-  ].map((a) => ({ name: a.text, url: a.href }));
-
-  return links;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

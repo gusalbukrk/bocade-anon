@@ -2,19 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 
 import { credentials } from '../../utils/getCredentials.js';
-import { getProblems } from '../../utils/getData.js';
+import { problems, runs, clarifications, score } from '../../utils/getData.js';
 import LoginForm from './LoginForm.js';
-
-type downloadLinks = { name: string; url: string }[];
-
-type problems = Awaited<ReturnType<typeof getProblems>>;
+import ProblemsTable from './ProblemsTable.js';
+import RunsTable from './RunsTable.js';
+import ClarificationsTable from './ClarificationsTable.js';
+import ScoreTable from './ScoreTable.js';
 
 type updateUIMessage = {
   command: string;
   credentials: credentials;
-  content?: string;
-  downloadLinks?: downloadLinks;
   problems?: problems;
+  runs?: runs;
+  clarifications?: clarifications;
+  score?: score;
 };
 
 const Dashboard = ({
@@ -23,9 +24,10 @@ const Dashboard = ({
   vscode: ReturnType<typeof acquireVsCodeApi>;
 }) => {
   const [credentials, setCredentials] = useState<credentials>();
-  const [sectionContent, setSectionContent] = useState<string>();
-  const [downloadLinks, setDownloadLinks] = useState<downloadLinks>();
   const [problems, setProblems] = useState<problems>();
+  const [runs, setRuns] = useState<runs>();
+  const [clarifications, setClarifications] = useState<clarifications>();
+  const [score, setScore] = useState<score>();
 
   useEffect(() => {
     window.addEventListener('message', (event) => {
@@ -35,9 +37,10 @@ const Dashboard = ({
         setCredentials(message.credentials);
 
         if (message.credentials !== null) {
-          setSectionContent(message.content);
-          setDownloadLinks(message.downloadLinks);
           setProblems(message.problems);
+          setRuns(message.runs);
+          setClarifications(message.clarifications);
+          setScore(message.score);
         }
       }
     });
@@ -72,25 +75,23 @@ const Dashboard = ({
             <VSCodeButton onClick={handleLogoutButtonClick}>
               Log Out
             </VSCodeButton>
-            <section
-              dangerouslySetInnerHTML={{ __html: sectionContent ?? '' }}
-            ></section>
-            {(downloadLinks ?? []).map(({ name, url }) => {
-              return (
-                <p>
-                  <a href={url} onClick={handleDownloadLinkClick}>
-                    {name}
-                  </a>
-                </p>
-              );
-            })}
-            <table>
-              {(problems ?? []).map((problem) => (
-                <tr>
-                  <td>{problem.name}</td>
-                </tr>
-              ))}
-            </table>
+
+            <ProblemsTable
+              problems={problems ?? []}
+              handleDownloadLinkClick={handleDownloadLinkClick}
+            />
+
+            <RunsTable
+              runs={runs ?? []}
+              handleDownloadLinkClick={handleDownloadLinkClick}
+            />
+
+            <ClarificationsTable clarifications={clarifications ?? []} />
+
+            <ScoreTable
+              problemsNames={(problems ?? []).map((p) => p.name ?? '')}
+              score={score ?? []}
+            />
           </>
         ))}
     </>
