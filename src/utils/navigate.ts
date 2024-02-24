@@ -237,10 +237,37 @@ async function logOut(secrets: vscode.SecretStorage) {
   return await getPageJSDOM('index.php', secrets);
 }
 
+/**
+ * Submit form to BOCA run page containing source code file and other data.
+ */
+async function upload(
+  secrets: vscode.SecretStorage,
+  path: string,
+  body: FormData,
+) {
+  const headers = new Headers();
+  headers.append('Cookie', await getCookieString(secrets));
+
+  const res = await fetch(
+    generateBOCAURL((await getCredentials(secrets)).ip, path),
+    {
+      method: 'POST',
+      body,
+      headers,
+    },
+  );
+
+  return await res.text();
+}
+
 function generateBOCAURL(ip: string, path: string) {
   return `http://${ip}/boca/${path}`;
 }
 
+/**
+ * Get cookie string from storage; if it's not stored, navigate to a page which requires
+ * authentication to trigger BOCA authentication and storage of newly generated cookie jar
+ */
 async function getCookieString(secrets: vscode.SecretStorage) {
   let cookieJarStr = await secrets.get('cookieJar');
   let cookieJarObj =
@@ -328,4 +355,4 @@ function isLogoutPath(path: string) {
   return path === '' || path === 'index.php';
 }
 
-export { logIn, logOut, getPageJSDOM, download };
+export { logIn, logOut, getPageJSDOM, download, upload };

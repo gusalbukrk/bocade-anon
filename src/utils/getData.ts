@@ -6,6 +6,9 @@ type problems = Awaited<ReturnType<typeof getProblems>>;
 type runs = Awaited<ReturnType<typeof getRuns>>;
 type clarifications = Awaited<ReturnType<typeof getClarifications>>;
 type score = Awaited<ReturnType<typeof getScore>>;
+type allowedProgrammingLanguages = Awaited<
+  ReturnType<typeof getAllowedProgrammingLanguages>
+>;
 
 async function getProblems(secrets: vscode.SecretStorage) {
   const problemsPageJSDOM = await getPageJSDOM('team/problem.php', secrets);
@@ -163,6 +166,25 @@ async function getScore(secrets: vscode.SecretStorage) {
   return score;
 }
 
+async function getAllowedProgrammingLanguages(secrets: vscode.SecretStorage) {
+  const runPageJSDOM = await getPageJSDOM('team/run.php', secrets);
+
+  const runsFormLanguageOptions = [
+    ...runPageJSDOM.window.document.querySelectorAll(
+      'form select[name="language"] option',
+    ),
+  ];
+
+  const allowedProgrammingLanguages = runsFormLanguageOptions.map((option) => {
+    return {
+      id: option.getAttribute('value'),
+      name: option.textContent?.trim(),
+    };
+  });
+
+  return allowedProgrammingLanguages;
+}
+
 export {
   problems,
   getProblems,
@@ -172,4 +194,6 @@ export {
   getClarifications,
   score,
   getScore,
+  allowedProgrammingLanguages,
+  getAllowedProgrammingLanguages,
 };

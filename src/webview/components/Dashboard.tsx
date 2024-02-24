@@ -2,7 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
 
 import { credentials } from '../../utils/getCredentials.js';
-import { problems, runs, clarifications, score } from '../../utils/getData.js';
+import {
+  problems,
+  runs,
+  clarifications,
+  score,
+  allowedProgrammingLanguages,
+} from '../../utils/getData.js';
 import LoginForm from './LoginForm.js';
 import ProblemsTable from './ProblemsTable.js';
 import RunsTable from './RunsTable.js';
@@ -16,6 +22,7 @@ type updateUIMessage = {
   runs?: runs;
   clarifications?: clarifications;
   score?: score;
+  allowedProgrammingLanguages?: allowedProgrammingLanguages;
 };
 
 const Dashboard = ({
@@ -28,6 +35,8 @@ const Dashboard = ({
   const [runs, setRuns] = useState<runs>();
   const [clarifications, setClarifications] = useState<clarifications>();
   const [score, setScore] = useState<score>();
+  const [allowedProgrammingLanguages, setAllowedProgrammingLanguages] =
+    useState<allowedProgrammingLanguages>();
 
   useEffect(() => {
     window.addEventListener('message', (event) => {
@@ -41,6 +50,7 @@ const Dashboard = ({
           setRuns(message.runs);
           setClarifications(message.clarifications);
           setScore(message.score);
+          setAllowedProgrammingLanguages(message.allowedProgrammingLanguages);
         }
       }
     });
@@ -83,7 +93,10 @@ const Dashboard = ({
 
             <RunsTable
               runs={runs ?? []}
+              problemsNames={(problems ?? []).map((p) => p.name ?? '')}
+              allowedProgrammingLanguages={allowedProgrammingLanguages ?? []}
               handleDownloadLinkClick={handleDownloadLinkClick}
+              vscode={vscode}
             />
 
             <ClarificationsTable clarifications={clarifications ?? []} />

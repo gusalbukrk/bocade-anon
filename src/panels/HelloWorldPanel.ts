@@ -1,21 +1,29 @@
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import * as vscode from 'vscode';
 
 import getCredentials, { credentials } from '../utils/getCredentials';
 import { getUri } from '../utils/getUri';
 import { getNonce } from '../utils/getNonce';
-import { logIn, logOut, download } from '../utils/navigate';
+import { logIn, logOut, download, upload } from '../utils/navigate';
 import {
   getProblems,
   getRuns,
   getClarifications,
   getScore,
+  getAllowedProgrammingLanguages,
 } from '../utils/getData';
 
 type message = { command: string };
 type howdyMessage = { command: 'howdy'; text: string };
 type loginMessage = { command: 'login'; credentials: credentials };
 type downloadMessage = { command: 'download'; name: string; url: string };
+type runsSubmitMessage = {
+  command: 'runs-submit';
+  problem: string;
+  language: string;
+  file: { path: string; type: string };
+};
 
 export class HelloWorldPanel {
   public static currentPanel: HelloWorldPanel | undefined;
@@ -59,7 +67,15 @@ export class HelloWorldPanel {
           // Enable javascript in the webview
           enableScripts: true,
           // Restrict the webview to only load resources from the `out` directory
-          localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'out')],
+          localResourceRoots: [
+            vscode.Uri.joinPath(extensionUri, 'out'),
+            vscode.Uri.joinPath(
+              extensionUri,
+              'node_modules',
+              '@vscode/codicons',
+              'dist',
+            ),
+          ],
         },
       );
 
@@ -92,6 +108,12 @@ export class HelloWorldPanel {
       'out',
       'webview.js',
     ]).toString();
+    const codiconsUri = getUri(webview, extensionUri, [
+      'node_modules',
+      '@vscode/codicons',
+      'dist',
+      'codicon.css',
+    ]);
 
     const nonce = getNonce();
 
@@ -102,6 +124,7 @@ export class HelloWorldPanel {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; img-src ${webview.cspSource} https: http:; script-src 'nonce-${nonce}';">
+          <link href="${codiconsUri.toString(true)}" rel="stylesheet" />
           <title>Hello World!</title>
         </head>
         <body>
@@ -170,6 +193,33 @@ export class HelloWorldPanel {
             );
 
             return;
+          case 'runs-submit':
+            const { problem, language, file } = message as runsSubmitMessage;
+            const blob = new Blob(
+              [readFileSync(file.path, { encoding: 'utf8', flag: 'r' })],
+              { type: file.type },
+            );
+
+            const body = new FormData();
+            body.append('confirmation', 'confirm');
+            body.append('problem', problem);
+            body.append('language', language);
+            // triggers warning `ExperimentalWarning: buffer.File is an experimental feature`
+            // as you can see here https://nodejs.org/api/buffer.html#class-file,
+            // API stopped being experimental since v20
+            // (to check which Node version VS Code is running on, go to Help > About)
+            body.append('sourcefile', blob, path.basename(file.path));
+            body.append('Submit', 'Send');
+
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const uploadHtmlResponse = await upload(
+              this._secrets,
+              'team/run.php',
+              body,
+            );
+            // console.log(uploadHtmlResponse);
+
+            return;
         }
       },
       undefined,
@@ -200,6 +250,9 @@ async function updateUI(
   const runs = await getRuns(secrets);
   const clarifications = await getClarifications(secrets);
   const score = await getScore(secrets);
+  const allowedProgrammingLanguages =
+    await getAllowedProgrammingLanguages(secrets);
+  console.log(allowedProgrammingLanguages);
 
   await panel.webview.postMessage({
     command: 'update-ui',
@@ -208,6 +261,7 @@ async function updateUI(
     runs,
     clarifications,
     score,
+    allowedProgrammingLanguages,
   });
 }
 
