@@ -26,12 +26,22 @@ function RunsTable({
   vscode: ReturnType<typeof acquireVsCodeApi>;
 }) {
   const [selectedFilePath, setSelectedFilePath] = React.useState<string>();
+  const [warning, setWarning] = React.useState('');
+  const timeoutIDRef = React.useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     window.addEventListener('message', (e) => {
-      const message = e.data as { command: string; path: string };
+      const message = e.data as { command: string };
       if (message.command === 'picked-file') {
-        setSelectedFilePath(message.path);
+        setSelectedFilePath(
+          (message as typeof message & { path: string }).path,
+        );
+      } else if (message.command === 'runs-submitted') {
+        setWarning('Run submitted successfully.');
+
+        timeoutIDRef.current = setTimeout(() => {
+          setWarning('');
+        }, 10000);
       }
     });
   }, []);
@@ -45,6 +55,11 @@ function RunsTable({
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    if (timeoutIDRef.current !== undefined) {
+      clearTimeout(timeoutIDRef.current);
+    }
+    setWarning('');
+
     const form = e.target as HTMLFormElement;
     const problem = form
       .querySelector('#problemsDropdown')
@@ -53,6 +68,11 @@ function RunsTable({
       .querySelector('#languagesDropdown')
       ?.getAttribute('current-value');
     const filePath = selectedFilePath;
+
+    if (problem === '-1' || language === '-1' || filePath === undefined) {
+      setWarning('All fields are required.');
+      return;
+    }
 
     vscode.postMessage({
       command: 'runs-submit',
@@ -135,6 +155,8 @@ function RunsTable({
 
         <VSCodeButton type="submit">Submit</VSCodeButton>
       </form>
+
+      <p>{warning}</p>
     </>
   );
 }

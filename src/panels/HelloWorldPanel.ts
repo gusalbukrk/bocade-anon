@@ -225,6 +225,10 @@ export class HelloWorldPanel {
             );
             console.log(uploadHtmlResponse);
 
+            await this._panel.webview.postMessage({
+              command: 'runs-submitted',
+            });
+
             return;
           case 'pick-file': // 'Choose a file' button has been clicked
             const files = await vscode.window.showOpenDialog({
