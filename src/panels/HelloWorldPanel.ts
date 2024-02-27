@@ -1,3 +1,4 @@
+import mime from 'mime-types';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import * as vscode from 'vscode';
@@ -22,7 +23,7 @@ type runsSubmitMessage = {
   command: 'runs-submit';
   problem: string;
   language: string;
-  file: { path: string; type: string };
+  filePath: string;
 };
 
 export class HelloWorldPanel {
@@ -194,21 +195,26 @@ export class HelloWorldPanel {
 
             return;
           case 'runs-submit':
-            const { problem, language, file } = message as runsSubmitMessage;
+            const { problem, language, filePath } =
+              message as runsSubmitMessage;
             const blob = new Blob(
-              [readFileSync(file.path, { encoding: 'utf8', flag: 'r' })],
-              { type: file.type },
+              [readFileSync(filePath, { encoding: 'utf8', flag: 'r' })],
+
+              // options.type is optional (defaults to '')
+              // leave it undefined doesn't appear to break anything
+              // however, it's being defined here just in case
+              { type: mime.lookup(path.extname(filePath)) || '' },
             );
 
             const body = new FormData();
             body.append('confirmation', 'confirm');
             body.append('problem', problem);
             body.append('language', language);
-            // triggers warning `ExperimentalWarning: buffer.File is an experimental feature`
+            // may trigger warning `ExperimentalWarning: buffer.File is an experimental feature`;
             // as you can see here https://nodejs.org/api/buffer.html#class-file,
-            // API stopped being experimental since v20
+            // API is no longer experimental as of v20
             // (to check which Node version VS Code is running on, go to Help > About)
-            body.append('sourcefile', blob, path.basename(file.path));
+            body.append('sourcefile', blob, path.basename(filePath));
             body.append('Submit', 'Send');
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -217,7 +223,19 @@ export class HelloWorldPanel {
               'team/run.php',
               body,
             );
-            // console.log(uploadHtmlResponse);
+            console.log(uploadHtmlResponse);
+
+            return;
+          case 'pick-file': // 'Choose a file' button has been clicked
+            const files = await vscode.window.showOpenDialog({
+              openLabel: 'Select file',
+              title: 'File dialog',
+            });
+
+            await this._panel.webview.postMessage({
+              command: 'picked-file',
+              path: files?.[0].fsPath,
+            });
 
             return;
         }

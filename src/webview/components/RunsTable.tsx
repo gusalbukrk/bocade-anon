@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect } from 'react';
 import {
   VSCodeDataGrid,
   VSCodeDataGridRow,
@@ -25,24 +25,21 @@ function RunsTable({
   ) => void;
   vscode: ReturnType<typeof acquireVsCodeApi>;
 }) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFileName, setSelectedFileName] = React.useState<string>();
+  const [selectedFilePath, setSelectedFilePath] = React.useState<string>();
+
+  useEffect(() => {
+    window.addEventListener('message', (e) => {
+      const message = e.data as { command: string; path: string };
+      if (message.command === 'picked-file') {
+        setSelectedFilePath(message.path);
+      }
+    });
+  }, []);
 
   function handleFileUploadButtonClick() {
-    if (fileInputRef.current !== null) {
-      // when user exits the file dialog without choosing a file, file input value is set to empty
-      // however, input change event isn't triggered; thus, selectedFileName isn't updated
-      //
-      // preemptively reset both input value and selectedFileName right before opening file dialog
-      fileInputRef.current.value = '';
-      setSelectedFileName(undefined);
-
-      fileInputRef.current.click();
-    }
-  }
-
-  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setSelectedFileName(e.target.files?.[0].name);
+    vscode.postMessage({
+      command: 'pick-file',
+    });
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -55,26 +52,13 @@ function RunsTable({
     const language = form
       .querySelector('#languagesDropdown')
       ?.getAttribute('current-value');
-
-    // getting file path from input file isn't possible in browsers, but it is in Electron
-    // https://github.com/electron/electron/blob/main/docs/api/file-object.md
-    // however, `File.path` is deprecated and `webUtils.getPathForFile` should be used instead
-    // https://www.electronjs.org/docs/latest/api/web-utils#webutilsgetpathforfilefile
-    // however, it's a export from `electron` module, which doesn't run on client-side code
-    // alternatives for when `File.path` gets removed:
-    // (1) pass `file.text()` to extension and let it create a temporary new file in the filesystem
-    // (2) explore if it's possible to use `window.showOpenDialog` to pick a file
-    // (https://code.visualstudio.com/api/references/vscode-api#window.showOpenDialog)
-    const file = form.querySelector<HTMLInputElement>('input[type="file"]')
-      ?.files?.[0] as File & { path: string };
-    const filePath = file.path;
-    const fileType = file.type;
+    const filePath = selectedFilePath;
 
     vscode.postMessage({
       command: 'runs-submit',
       problem,
       language,
-      file: { path: filePath, type: fileType },
+      filePath,
     });
   }
 
@@ -139,26 +123,15 @@ function RunsTable({
           </VSCodeDropdown>
         </div>
 
-        {/* there's no input type file in toolkit
-        https://github.com/microsoft/vscode-webview-ui-toolkit/issues/254 */}
-        <input
-          type="file"
-          name="sourcefile"
-          id="sourcefile"
-          ref={fileInputRef}
-          style={{ display: 'none' }}
-          onChange={handleFileInputChange}
-        />
-
         <VSCodeButton
-          style={{ width: '120px' }}
           onClick={handleFileUploadButtonClick}
+          style={{ width: '120px' }}
         >
           Choose file
           <span className="codicon codicon-add"></span>
         </VSCodeButton>
 
-        <span>{selectedFileName ?? 'No file chosen.'}</span>
+        <span>{selectedFilePath ?? 'No file chosen.'}</span>
 
         <VSCodeButton type="submit">Submit</VSCodeButton>
       </form>
