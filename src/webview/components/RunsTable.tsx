@@ -82,7 +82,9 @@ function RunsTable({
     });
   }
 
-  return (
+  return runs.length === 0 ? (
+    <p>No runs available.</p>
+  ) : (
     <>
       <VSCodeDataGrid>
         <VSCodeDataGridRow

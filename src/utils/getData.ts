@@ -131,10 +131,12 @@ async function getScore(secrets: vscode.SecretStorage) {
     ),
   ];
 
-  // https://github.com/cassiopc/boca/blob/master/src/scoretable.php
-  if (scoreTableRows.length === 1) {
-    return [];
-  }
+  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/scoretable.php#L320
+  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/fscore.php#L305
+  // line of code below not needed because score table will never be empty; as long there're teams
+  // registered in a competition (and they've logged in), they'll show up in the score table
+  // even if no problem has been solved or scoreboard in frozen (`Stop scoreboard` setting)
+  // if (scoreTableRows.length === 1) return [];
 
   const ip = (await getCredentials(secrets)).ip;
 

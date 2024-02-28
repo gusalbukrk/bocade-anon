@@ -12,7 +12,9 @@ function ClarificationsTable({
 }: {
   clarifications: clarifications;
 }) {
-  return (
+  return clarifications.length === 0 ? (
+    <p>No clarifications available.</p>
+  ) : (
     <VSCodeDataGrid>
       <VSCodeDataGridRow
         rowType="header"

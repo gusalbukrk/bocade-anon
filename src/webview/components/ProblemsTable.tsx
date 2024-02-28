@@ -16,7 +16,9 @@ function ProblemsTable({
     e: React.MouseEvent<HTMLAnchorElement> & { target: HTMLAnchorElement },
   ) => void;
 }) {
-  return (
+  return problems.length === 0 ? (
+    <p>No problems available yet.</p>
+  ) : (
     <VSCodeDataGrid>
       <VSCodeDataGridRow
         rowType="header"
