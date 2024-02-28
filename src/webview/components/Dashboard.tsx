@@ -93,7 +93,7 @@ const Dashboard = ({
 
             <RunsTable
               runs={runs ?? []}
-              problemsNames={(problems ?? []).map((p) => p.name ?? '')}
+              problemsNames={(problems ?? []).map((p) => p.name)}
               allowedProgrammingLanguages={allowedProgrammingLanguages ?? []}
               handleDownloadLinkClick={handleDownloadLinkClick}
               vscode={vscode}
@@ -102,7 +102,7 @@ const Dashboard = ({
             <ClarificationsTable clarifications={clarifications ?? []} />
 
             <ScoreTable
-              problemsNames={(problems ?? []).map((p) => p.name ?? '')}
+              problemsNames={(problems ?? []).map((p) => p.name)}
               score={score ?? []}
             />
           </>

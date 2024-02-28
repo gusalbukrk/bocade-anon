@@ -32,29 +32,33 @@ function ClarificationsTable({
         )}
       </VSCodeDataGridRow>
 
-      {score.map((s) => (
+      {score.map((team) => (
         <VSCodeDataGridRow>
-          <VSCodeDataGridCell gridColumn="1">{s.position}</VSCodeDataGridCell>
-          <VSCodeDataGridCell gridColumn="2">{s.usersite}</VSCodeDataGridCell>
-          <VSCodeDataGridCell gridColumn="3">{s.name}</VSCodeDataGridCell>
-          {s.problems.map((problem, i) => (
+          <VSCodeDataGridCell gridColumn="1">
+            {team.position}
+          </VSCodeDataGridCell>
+          <VSCodeDataGridCell gridColumn="2">
+            {team.usersite}
+          </VSCodeDataGridCell>
+          <VSCodeDataGridCell gridColumn="3">{team.name}</VSCodeDataGridCell>
+          {team.problems.map((problem, i) => (
             <VSCodeDataGridCell gridColumn={(4 + i).toString()}>
-              {problem.text === '' ? (
+              {problem === null ? (
                 ''
+              ) : typeof problem === 'string' ? (
+                problem
               ) : (
                 <>
-                  <img
-                    src={problem.balloon ?? ''}
-                    alt={problem.color ?? ''}
-                    width="18"
-                  />
+                  <img src={problem.balloon} alt={problem.color} width="18" />
                   <span>{problem.text}</span>
                 </>
               )}
             </VSCodeDataGridCell>
           ))}
-          <VSCodeDataGridCell gridColumn={(4 + s.problems.length).toString()}>
-            {s.total}
+          <VSCodeDataGridCell
+            gridColumn={(4 + team.problems.length).toString()}
+          >
+            {team.total}
           </VSCodeDataGridCell>
         </VSCodeDataGridRow>
       ))}

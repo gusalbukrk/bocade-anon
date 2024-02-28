@@ -115,7 +115,7 @@ function RunsTable({
             </VSCodeDataGridCell>
             <VSCodeDataGridCell gridColumn="5">{run.answer}</VSCodeDataGridCell>
             <VSCodeDataGridCell gridColumn="6">
-              <a href={run.file.href ?? ''} onClick={handleDownloadLinkClick}>
+              <a href={run.file.href} onClick={handleDownloadLinkClick}>
                 {run.file.name}
               </a>
             </VSCodeDataGridCell>
@@ -137,10 +137,9 @@ function RunsTable({
         <div>
           <label htmlFor="languagesDropdown">Language:</label>
           <VSCodeDropdown id="languagesDropdown">
+            <VSCodeOption value="-1">--</VSCodeOption>
             {allowedProgrammingLanguages.map((language) => (
-              <VSCodeOption value={language.id ?? ''}>
-                {language.name}
-              </VSCodeOption>
+              <VSCodeOption value={language.id}>{language.name}</VSCodeOption>
             ))}
           </VSCodeDropdown>
         </div>

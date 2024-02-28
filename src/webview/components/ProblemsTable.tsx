@@ -39,11 +39,7 @@ function ProblemsTable({
       {problems.map((problem) => (
         <VSCodeDataGridRow>
           <VSCodeDataGridCell gridColumn="1">
-            <img
-              width="20"
-              src={problem.balloon ?? ''}
-              alt={problem.color ?? ''}
-            />
+            <img width="20" src={problem.balloon} alt={problem.color} />
           </VSCodeDataGridCell>
           <VSCodeDataGridCell gridColumn="2">{problem.name}</VSCodeDataGridCell>
           <VSCodeDataGridCell gridColumn="3">
@@ -53,12 +49,13 @@ function ProblemsTable({
             {problem.fullname}
           </VSCodeDataGridCell>
           <VSCodeDataGridCell gridColumn="5">
-            <a
-              href={problem.descfile.href ?? ''}
-              onClick={handleDownloadLinkClick}
-            >
-              {problem.descfile.name}
-            </a>
+            {problem.descfile === null ? (
+              'No description file available'
+            ) : (
+              <a href={problem.descfile.href} onClick={handleDownloadLinkClick}>
+                {problem.descfile.name}
+              </a>
+            )}
           </VSCodeDataGridCell>
         </VSCodeDataGridRow>
       ))}
