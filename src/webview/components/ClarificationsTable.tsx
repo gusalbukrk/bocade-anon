@@ -9,15 +9,15 @@ import {
   VSCodeOption,
 } from '@vscode/webview-ui-toolkit/react';
 
-import { clarifications } from '../../utils/getData.js';
+import { clarifications, problemsIds } from '../../utils/getData.js';
 
 function ClarificationsTable({
   clarifications,
-  problemsNames,
+  problemsIds,
   vscode,
 }: {
   clarifications: clarifications;
-  problemsNames: string[];
+  problemsIds: problemsIds;
   vscode: ReturnType<typeof acquireVsCodeApi>;
 }) {
   const [warning, setWarning] = React.useState('');
@@ -114,8 +114,8 @@ function ClarificationsTable({
           <label htmlFor="problemsDropdown">Problem:</label>
           <VSCodeDropdown id="problemsDropdown">
             <VSCodeOption value="0">General</VSCodeOption>
-            {problemsNames.map((problem, i) => (
-              <VSCodeOption value={(i + 1).toString()}>{problem}</VSCodeOption>
+            {problemsIds.map((problem) => (
+              <VSCodeOption value={problem.id}>{problem.name}</VSCodeOption>
             ))}
           </VSCodeDropdown>
         </div>

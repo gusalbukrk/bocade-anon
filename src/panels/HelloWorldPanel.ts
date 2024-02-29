@@ -13,6 +13,7 @@ import {
   getClarifications,
   getScore,
   getAllowedProgrammingLanguages,
+  getProblemsIds,
 } from '../utils/getData';
 
 type message = { command: string };
@@ -305,7 +306,7 @@ async function updateUI(
   const score = await getScore(secrets);
   const allowedProgrammingLanguages =
     await getAllowedProgrammingLanguages(secrets);
-  console.log(allowedProgrammingLanguages);
+  const problemsIds = await getProblemsIds(secrets);
 
   await panel.webview.postMessage({
     command: 'update-ui',
@@ -315,6 +316,7 @@ async function updateUI(
     clarifications,
     score,
     allowedProgrammingLanguages,
+    problemsIds,
   });
 }
 

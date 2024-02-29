@@ -8,6 +8,7 @@ import {
   clarifications,
   score,
   allowedProgrammingLanguages,
+  problemsIds,
 } from '../../utils/getData.js';
 import LoginForm from './LoginForm.js';
 import ProblemsTable from './ProblemsTable.js';
@@ -23,6 +24,7 @@ type updateUIMessage = {
   clarifications?: clarifications;
   score?: score;
   allowedProgrammingLanguages?: allowedProgrammingLanguages;
+  problemsIds: problemsIds;
 };
 
 const Dashboard = ({
@@ -37,6 +39,7 @@ const Dashboard = ({
   const [score, setScore] = useState<score>();
   const [allowedProgrammingLanguages, setAllowedProgrammingLanguages] =
     useState<allowedProgrammingLanguages>();
+  const [problemsIds, setProblemsIds] = useState<problemsIds>();
 
   useEffect(() => {
     window.addEventListener('message', (event) => {
@@ -51,6 +54,7 @@ const Dashboard = ({
           setClarifications(message.clarifications);
           setScore(message.score);
           setAllowedProgrammingLanguages(message.allowedProgrammingLanguages);
+          setProblemsIds(message.problemsIds);
         }
       }
     });
@@ -93,7 +97,7 @@ const Dashboard = ({
 
             <RunsTable
               runs={runs ?? []}
-              problemsNames={(problems ?? []).map((p) => p.name)}
+              problemsIds={problemsIds ?? []}
               allowedProgrammingLanguages={allowedProgrammingLanguages ?? []}
               handleDownloadLinkClick={handleDownloadLinkClick}
               vscode={vscode}
@@ -101,7 +105,7 @@ const Dashboard = ({
 
             <ClarificationsTable
               clarifications={clarifications ?? []}
-              problemsNames={(problems ?? []).map((p) => p.name)}
+              problemsIds={problemsIds ?? []}
               vscode={vscode}
             />
 

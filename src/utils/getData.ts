@@ -9,6 +9,7 @@ type score = Awaited<ReturnType<typeof getScore>>;
 type allowedProgrammingLanguages = Awaited<
   ReturnType<typeof getAllowedProgrammingLanguages>
 >;
+type problemsIds = Awaited<ReturnType<typeof getProblemsIds>>;
 
 async function getProblems(secrets: vscode.SecretStorage) {
   const problemsPageJSDOM = await getPageJSDOM('team/problem.php', secrets);
@@ -240,6 +241,28 @@ async function getAllowedProgrammingLanguages(secrets: vscode.SecretStorage) {
   return allowedProgrammingLanguages;
 }
 
+/**
+ * problemnumber isn't printed in problems pages
+ * https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/problem.php#L64
+ * it's only printed in the runs and clarifications forms
+ */
+async function getProblemsIds(secrets: vscode.SecretStorage) {
+  const runPageJSDOM = await getPageJSDOM('team/run.php', secrets);
+
+  const runsFormProblemsOptions = [
+    ...runPageJSDOM.window.document.querySelectorAll<HTMLOptionElement>(
+      'form select[name="problem"] option',
+    ),
+  ];
+
+  const problemsIds = runsFormProblemsOptions.slice(1).map((option) => ({
+    id: option.value,
+    name: option.text,
+  }));
+
+  return problemsIds;
+}
+
 export {
   problems,
   getProblems,
@@ -251,4 +274,6 @@ export {
   getScore,
   allowedProgrammingLanguages,
   getAllowedProgrammingLanguages,
+  problemsIds,
+  getProblemsIds,
 };

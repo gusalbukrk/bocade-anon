@@ -8,17 +8,21 @@ import {
   VSCodeButton,
 } from '@vscode/webview-ui-toolkit/react';
 
-import { allowedProgrammingLanguages, runs } from '../../utils/getData.js';
+import {
+  allowedProgrammingLanguages,
+  problemsIds,
+  runs,
+} from '../../utils/getData.js';
 
 function RunsTable({
   runs,
-  problemsNames,
+  problemsIds,
   allowedProgrammingLanguages,
   handleDownloadLinkClick,
   vscode,
 }: {
   runs: runs;
-  problemsNames: string[];
+  problemsIds: problemsIds;
   allowedProgrammingLanguages: allowedProgrammingLanguages;
   handleDownloadLinkClick: (
     e: React.MouseEvent<HTMLAnchorElement> & { target: HTMLAnchorElement },
@@ -137,8 +141,8 @@ function RunsTable({
           <label htmlFor="problemsDropdown">Problem:</label>
           <VSCodeDropdown id="problemsDropdown">
             <VSCodeOption value="-1">--</VSCodeOption>
-            {problemsNames.map((problem, i) => (
-              <VSCodeOption value={(i + 1).toString()}>{problem}</VSCodeOption>
+            {problemsIds.map((problem) => (
+              <VSCodeOption value={problem.id}>{problem.name}</VSCodeOption>
             ))}
           </VSCodeDropdown>
         </div>
