@@ -38,7 +38,6 @@ function RunsTable({
         );
       } else if (message.command === 'runs-submitted') {
         setWarning('Run submitted successfully.');
-
         timeoutIDRef.current = setTimeout(() => {
           setWarning('');
         }, 10000);
@@ -61,16 +60,22 @@ function RunsTable({
     setWarning('');
 
     const form = e.target as HTMLFormElement;
+
+    /* eslint-disable @typescript-eslint/no-non-null-assertion */
     const problem = form
-      .querySelector('#problemsDropdown')
-      ?.getAttribute('current-value');
+      .querySelector('#problemsDropdown')!
+      .getAttribute('current-value')!;
     const language = form
-      .querySelector('#languagesDropdown')
-      ?.getAttribute('current-value');
+      .querySelector('#languagesDropdown')!
+      .getAttribute('current-value')!;
     const filePath = selectedFilePath;
+    /* eslint-enable @typescript-eslint/no-non-null-assertion */
 
     if (problem === '-1' || language === '-1' || filePath === undefined) {
       setWarning('All fields are required.');
+      timeoutIDRef.current = setTimeout(() => {
+        setWarning('');
+      }, 10000);
       return;
     }
 

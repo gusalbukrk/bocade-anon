@@ -25,6 +25,11 @@ type runsSubmitMessage = {
   language: string;
   filePath: string;
 };
+type clarificationsSubmitMessage = {
+  command: 'clarifications-submit';
+  problem: string;
+  question: string;
+};
 
 export class HelloWorldPanel {
   public static currentPanel: HelloWorldPanel | undefined;
@@ -195,8 +200,11 @@ export class HelloWorldPanel {
 
             return;
           case 'runs-submit':
-            const { problem, language, filePath } =
-              message as runsSubmitMessage;
+            const {
+              problem: rProblem,
+              language,
+              filePath,
+            } = message as runsSubmitMessage;
             const blob = new Blob(
               [readFileSync(filePath, { encoding: 'utf8', flag: 'r' })],
 
@@ -206,27 +214,50 @@ export class HelloWorldPanel {
               { type: mime.lookup(path.extname(filePath)) || '' },
             );
 
-            const body = new FormData();
-            body.append('confirmation', 'confirm');
-            body.append('problem', problem);
-            body.append('language', language);
+            const rBody = new FormData();
+            rBody.append('confirmation', 'confirm');
+            rBody.append('problem', rProblem);
+            rBody.append('language', language);
             // may trigger warning `ExperimentalWarning: buffer.File is an experimental feature`;
             // as you can see here https://nodejs.org/api/buffer.html#class-file,
             // API is no longer experimental as of v20
             // (to check which Node version VS Code is running on, go to Help > About)
-            body.append('sourcefile', blob, path.basename(filePath));
-            body.append('Submit', 'Send');
+            rBody.append('sourcefile', blob, path.basename(filePath));
+            rBody.append('Submit', 'Send');
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const uploadHtmlResponse = await upload(
+            const rUploadHtmlResponse = await upload(
               this._secrets,
               'team/run.php',
-              body,
+              rBody,
             );
-            console.log(uploadHtmlResponse);
+            console.log(rUploadHtmlResponse);
 
             await this._panel.webview.postMessage({
               command: 'runs-submitted',
+            });
+
+            return;
+          case 'clarifications-submit':
+            const { problem: cProblem, question } =
+              message as clarificationsSubmitMessage;
+
+            const cBody = new FormData();
+            cBody.append('confirmation', 'confirm');
+            cBody.append('problem', cProblem);
+            cBody.append('message', question);
+            cBody.append('Submit', 'Send');
+
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const cUploadHtmlResponse = await upload(
+              this._secrets,
+              'team/clar.php',
+              cBody,
+            );
+            console.log(cUploadHtmlResponse);
+
+            await this._panel.webview.postMessage({
+              command: 'clarifications-submitted',
             });
 
             return;

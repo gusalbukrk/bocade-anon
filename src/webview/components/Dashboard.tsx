@@ -99,7 +99,11 @@ const Dashboard = ({
               vscode={vscode}
             />
 
-            <ClarificationsTable clarifications={clarifications ?? []} />
+            <ClarificationsTable
+              clarifications={clarifications ?? []}
+              problemsNames={(problems ?? []).map((p) => p.name)}
+              vscode={vscode}
+            />
 
             <ScoreTable
               problemsNames={(problems ?? []).map((p) => p.name)}
