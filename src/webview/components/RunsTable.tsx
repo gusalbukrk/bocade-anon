@@ -82,46 +82,50 @@ function RunsTable({
     });
   }
 
-  return runs.length === 0 ? (
-    <p>No runs available.</p>
-  ) : (
+  return (
     <>
-      <VSCodeDataGrid>
-        <VSCodeDataGridRow
-          rowType="header"
-          style={{ textTransform: 'capitalize' }}
-        >
-          {['run', 'time', 'problem', 'language', 'answer', 'file'].map(
-            (column, i) => (
-              <VSCodeDataGridCell
-                cellType="columnheader"
-                gridColumn={(i + 1).toString()}
-              >
-                {column}
-              </VSCodeDataGridCell>
-            ),
-          )}
-        </VSCodeDataGridRow>
-
-        {runs.map((run) => (
-          <VSCodeDataGridRow>
-            <VSCodeDataGridCell gridColumn="1">{run.run}</VSCodeDataGridCell>
-            <VSCodeDataGridCell gridColumn="2">{run.time}</VSCodeDataGridCell>
-            <VSCodeDataGridCell gridColumn="3">
-              {run.problem}
-            </VSCodeDataGridCell>
-            <VSCodeDataGridCell gridColumn="4">
-              {run.language}
-            </VSCodeDataGridCell>
-            <VSCodeDataGridCell gridColumn="5">{run.answer}</VSCodeDataGridCell>
-            <VSCodeDataGridCell gridColumn="6">
-              <a href={run.file.href} onClick={handleDownloadLinkClick}>
-                {run.file.name}
-              </a>
-            </VSCodeDataGridCell>
+      {runs.length === 0 ? (
+        <p>No runs available.</p>
+      ) : (
+        <VSCodeDataGrid>
+          <VSCodeDataGridRow
+            rowType="header"
+            style={{ textTransform: 'capitalize' }}
+          >
+            {['run', 'time', 'problem', 'language', 'answer', 'file'].map(
+              (column, i) => (
+                <VSCodeDataGridCell
+                  cellType="columnheader"
+                  gridColumn={(i + 1).toString()}
+                >
+                  {column}
+                </VSCodeDataGridCell>
+              ),
+            )}
           </VSCodeDataGridRow>
-        ))}
-      </VSCodeDataGrid>
+
+          {runs.map((run) => (
+            <VSCodeDataGridRow>
+              <VSCodeDataGridCell gridColumn="1">{run.run}</VSCodeDataGridCell>
+              <VSCodeDataGridCell gridColumn="2">{run.time}</VSCodeDataGridCell>
+              <VSCodeDataGridCell gridColumn="3">
+                {run.problem}
+              </VSCodeDataGridCell>
+              <VSCodeDataGridCell gridColumn="4">
+                {run.language}
+              </VSCodeDataGridCell>
+              <VSCodeDataGridCell gridColumn="5">
+                {run.answer}
+              </VSCodeDataGridCell>
+              <VSCodeDataGridCell gridColumn="6">
+                <a href={run.file.href} onClick={handleDownloadLinkClick}>
+                  {run.file.name}
+                </a>
+              </VSCodeDataGridCell>
+            </VSCodeDataGridRow>
+          ))}
+        </VSCodeDataGrid>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div>
