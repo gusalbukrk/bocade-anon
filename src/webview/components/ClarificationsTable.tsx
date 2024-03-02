@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { Component, useEffect } from 'react';
 import {
   VSCodeDataGrid,
   VSCodeDataGridRow,
@@ -23,6 +23,15 @@ function ClarificationsTable({
   const [warning, setWarning] = React.useState('');
   const timeoutIDRef = React.useRef<NodeJS.Timeout>();
 
+  // refs typing doesn't includes all available properties out-of-the-box
+  // https://github.com/microsoft/fast/issues/6909
+  const problemsDropdownRef = React.useRef<
+    Component<typeof VSCodeDropdown> & HTMLElement
+  >(null);
+  const questionTextAreaRef = React.useRef<
+    Component<typeof VSCodeDropdown> & HTMLElement
+  >(null);
+
   useEffect(() => {
     window.addEventListener('message', (e) => {
       const message = e.data as { command: string };
@@ -43,15 +52,10 @@ function ClarificationsTable({
     }
     setWarning('');
 
-    const form = e.target as HTMLFormElement;
-
     /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const problem = form
-      .querySelector('#problemsDropdown')!
-      .getAttribute('current-value')!;
-    const question = form
-      .querySelector('#questionTextArea')!
-      .getAttribute('current-value')!;
+    const problem = problemsDropdownRef.current!.getAttribute('current-value')!;
+    const question =
+      questionTextAreaRef.current!.getAttribute('current-value')!;
     /* eslint-enable @typescript-eslint/no-non-null-assertion */
 
     if (question === '') {
@@ -112,7 +116,7 @@ function ClarificationsTable({
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="problemsDropdown">Problem:</label>
-          <VSCodeDropdown id="problemsDropdown">
+          <VSCodeDropdown id="problemsDropdown" ref={problemsDropdownRef}>
             <VSCodeOption value="0">General</VSCodeOption>
             {problemsIds.map((problem) => (
               <VSCodeOption value={problem.id}>{problem.name}</VSCodeOption>
@@ -120,7 +124,7 @@ function ClarificationsTable({
           </VSCodeDropdown>
         </div>
 
-        <VSCodeTextArea id="questionTextArea">Question</VSCodeTextArea>
+        <VSCodeTextArea ref={questionTextAreaRef}>Question</VSCodeTextArea>
 
         <VSCodeButton type="submit">Submit</VSCodeButton>
       </form>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { Component, useEffect } from 'react';
 import {
   VSCodeDataGrid,
   VSCodeDataGridRow,
@@ -33,6 +33,15 @@ function RunsTable({
   const [warning, setWarning] = React.useState('');
   const timeoutIDRef = React.useRef<NodeJS.Timeout>();
 
+  // refs typing doesn't includes all available properties out-of-the-box
+  // https://github.com/microsoft/fast/issues/6909
+  const problemsDropdownRef = React.useRef<
+    Component<typeof VSCodeDropdown> & HTMLElement
+  >(null);
+  const languagesDropdownRef = React.useRef<
+    Component<typeof VSCodeDropdown> & HTMLElement
+  >(null);
+
   useEffect(() => {
     window.addEventListener('message', (e) => {
       const message = e.data as { command: string };
@@ -63,15 +72,10 @@ function RunsTable({
     }
     setWarning('');
 
-    const form = e.target as HTMLFormElement;
-
     /* eslint-disable @typescript-eslint/no-non-null-assertion */
-    const problem = form
-      .querySelector('#problemsDropdown')!
-      .getAttribute('current-value')!;
-    const language = form
-      .querySelector('#languagesDropdown')!
-      .getAttribute('current-value')!;
+    const problem = problemsDropdownRef.current!.getAttribute('current-value')!;
+    const language =
+      languagesDropdownRef.current!.getAttribute('current-value')!;
     const filePath = selectedFilePath;
     /* eslint-enable @typescript-eslint/no-non-null-assertion */
 
@@ -139,7 +143,7 @@ function RunsTable({
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="problemsDropdown">Problem:</label>
-          <VSCodeDropdown id="problemsDropdown">
+          <VSCodeDropdown id="problemsDropdown" ref={problemsDropdownRef}>
             <VSCodeOption value="-1">--</VSCodeOption>
             {problemsIds.map((problem) => (
               <VSCodeOption value={problem.id}>{problem.name}</VSCodeOption>
@@ -149,7 +153,7 @@ function RunsTable({
 
         <div>
           <label htmlFor="languagesDropdown">Language:</label>
-          <VSCodeDropdown id="languagesDropdown">
+          <VSCodeDropdown id="languagesDropdown" ref={languagesDropdownRef}>
             <VSCodeOption value="-1">--</VSCodeOption>
             {allowedProgrammingLanguages.map((language) => (
               <VSCodeOption value={language.id}>{language.name}</VSCodeOption>
