@@ -9,11 +9,9 @@ import { getNonce } from '../utils/getNonce';
 import { logIn, logOut, download, upload } from '../utils/navigate';
 import {
   getProblems,
-  getRuns,
   getClarifications,
   getScore,
-  getAllowedProgrammingLanguages,
-  getProblemsIds,
+  getRunsData,
 } from '../utils/getData';
 
 type message = { command: string };
@@ -301,12 +299,10 @@ async function updateUI(
   }
 
   const problems = await getProblems(secrets);
-  const runs = await getRuns(secrets);
   const clarifications = await getClarifications(secrets);
   const score = await getScore(secrets);
-  const allowedProgrammingLanguages =
-    await getAllowedProgrammingLanguages(secrets);
-  const problemsIds = await getProblemsIds(secrets);
+  const { runs, allowedProgrammingLanguages, problemsIds } =
+    await getRunsData(secrets);
 
   await panel.webview.postMessage({
     command: 'update-ui',

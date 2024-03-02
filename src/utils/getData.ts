@@ -1,15 +1,7 @@
 import * as vscode from 'vscode';
+import jsdom from 'jsdom';
 import { getPageJSDOM } from '../utils/navigate';
 import getCredentials from './getCredentials';
-
-type problems = Awaited<ReturnType<typeof getProblems>>;
-type runs = Awaited<ReturnType<typeof getRuns>>;
-type clarifications = Awaited<ReturnType<typeof getClarifications>>;
-type score = Awaited<ReturnType<typeof getScore>>;
-type allowedProgrammingLanguages = Awaited<
-  ReturnType<typeof getAllowedProgrammingLanguages>
->;
-type problemsIds = Awaited<ReturnType<typeof getProblemsIds>>;
 
 async function getProblems(secrets: vscode.SecretStorage) {
   const problemsPageJSDOM = await getPageJSDOM('team/problem.php', secrets);
@@ -20,14 +12,10 @@ async function getProblems(secrets: vscode.SecretStorage) {
     ),
   ];
 
-  // problems table will always have at least one row
-  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/problem.php#L54
-  if (problemsTableRows.length === 1) {
-    return [];
-  }
-
   const ip = (await getCredentials(secrets)).ip;
 
+  // problem table always have at least 1 row (header row) which must be excluded from return
+  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/problem.php#L54
   const problems = problemsTableRows.slice(1).map((tr) => {
     const tds = tr.querySelectorAll('td');
 
@@ -66,23 +54,15 @@ async function getProblems(secrets: vscode.SecretStorage) {
   return problems;
 }
 
-async function getRuns(secrets: vscode.SecretStorage) {
-  const runsPageJSDOM = await getPageJSDOM('team/run.php', secrets);
-
+function getRuns(runsPageJSDOM: jsdom.JSDOM, ip: string) {
   const runsTableRows = [
     ...runsPageJSDOM.window.document.querySelectorAll(
       'table:nth-of-type(3) tr',
     ),
   ];
 
-  // runs table will always have at least one row
+  // runs table always have at least 1 row (header row) which must be excluded from return
   // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/run.php#L321
-  if (runsTableRows.length === 1) {
-    return [];
-  }
-
-  const ip = (await getCredentials(secrets)).ip;
-
   const runs = runsTableRows.slice(1).map((tr) => {
     const tds = tr.querySelectorAll('td');
 
@@ -110,6 +90,60 @@ async function getRuns(secrets: vscode.SecretStorage) {
   return runs;
 }
 
+function getAllowedProgrammingLanguages(runsPageJSDOM: jsdom.JSDOM) {
+  const runsFormLanguageOptions = [
+    ...runsPageJSDOM.window.document.querySelectorAll<HTMLOptionElement>(
+      'form select[name="language"] option',
+    ),
+  ];
+
+  // first select option is the default one and it has no valid value (i.e. -1)
+  const allowedProgrammingLanguages = runsFormLanguageOptions
+    .slice(1)
+    .map((option) => {
+      return {
+        id: option.value,
+        name: option.text,
+      };
+    });
+
+  return allowedProgrammingLanguages;
+}
+
+/**
+ * problemnumber isn't printed in problems pages
+ * https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/problem.php#L64
+ * it's only printed in the runs and clarifications forms
+ */
+function getProblemsIds(runsPageJSDOM: jsdom.JSDOM) {
+  const runsFormProblemsOptions = [
+    ...runsPageJSDOM.window.document.querySelectorAll<HTMLOptionElement>(
+      'form select[name="problem"] option',
+    ),
+  ];
+
+  // first select option is the default one and it has no valid value (i.e. -1)
+  const problemsIds = runsFormProblemsOptions.slice(1).map((option) => ({
+    id: option.value,
+    name: option.text,
+  }));
+
+  return problemsIds;
+}
+
+/**
+ * get all relevant data from `team/run.php` page (runs, allowed programming languages, problems ids)
+ */
+async function getRunsData(secrets: vscode.SecretStorage) {
+  const runsPageJSDOM = await getPageJSDOM('team/run.php', secrets);
+
+  return {
+    runs: getRuns(runsPageJSDOM, (await getCredentials(secrets)).ip),
+    allowedProgrammingLanguages: getAllowedProgrammingLanguages(runsPageJSDOM),
+    problemsIds: getProblemsIds(runsPageJSDOM),
+  };
+}
+
 async function getClarifications(secrets: vscode.SecretStorage) {
   const clarificationsPageJSDOM = await getPageJSDOM('team/clar.php', secrets);
 
@@ -119,12 +153,8 @@ async function getClarifications(secrets: vscode.SecretStorage) {
     ),
   ];
 
-  // clarifications table will always have at least one row
+  // clarifications table always have at least 1 row (header row) which must be excluded from return
   // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/clar.php#L35
-  if (clarificationsTableRows.length === 1) {
-    return [];
-  }
-
   const clarifications = clarificationsTableRows.slice(1).map((tr) => {
     const tds = tr.querySelectorAll('td');
 
@@ -155,15 +185,13 @@ async function getScore(secrets: vscode.SecretStorage) {
     ),
   ];
 
-  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/scoretable.php#L320
-  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/fscore.php#L305
-  // line of code below not needed because score table will never be empty; as long there're teams
-  // registered in a competition (and they've logged in), they'll show up in the score table
-  // even if no problem has been solved or scoreboard in frozen (`Stop scoreboard` setting)
-  // if (scoreTableRows.length === 1) return [];
-
   const ip = (await getCredentials(secrets)).ip;
 
+  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/scoretable.php#L320
+  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/fscore.php#L305
+  // score table will never be empty, it'll have at least 2 lines: a header and (at least) a team
+  // because as long there're teams registered in a competition (and they've logged in), they'll
+  // show up in the score table even if they haven't solved any problem or even if scoreboard is frozen
   const score = scoreTableRows.slice(1).map((tr) => {
     const tds = [...tr.querySelectorAll('td')];
 
@@ -220,60 +248,24 @@ async function getScore(secrets: vscode.SecretStorage) {
   return score;
 }
 
-async function getAllowedProgrammingLanguages(secrets: vscode.SecretStorage) {
-  const runPageJSDOM = await getPageJSDOM('team/run.php', secrets);
-
-  const runsFormLanguageOptions = [
-    ...runPageJSDOM.window.document.querySelectorAll<HTMLOptionElement>(
-      'form select[name="language"] option',
-    ),
-  ];
-
-  const allowedProgrammingLanguages = runsFormLanguageOptions
-    .slice(1)
-    .map((option) => {
-      return {
-        id: option.value,
-        name: option.text,
-      };
-    });
-
-  return allowedProgrammingLanguages;
-}
-
-/**
- * problemnumber isn't printed in problems pages
- * https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/problem.php#L64
- * it's only printed in the runs and clarifications forms
- */
-async function getProblemsIds(secrets: vscode.SecretStorage) {
-  const runPageJSDOM = await getPageJSDOM('team/run.php', secrets);
-
-  const runsFormProblemsOptions = [
-    ...runPageJSDOM.window.document.querySelectorAll<HTMLOptionElement>(
-      'form select[name="problem"] option',
-    ),
-  ];
-
-  const problemsIds = runsFormProblemsOptions.slice(1).map((option) => ({
-    id: option.value,
-    name: option.text,
-  }));
-
-  return problemsIds;
-}
+type problems = Awaited<ReturnType<typeof getProblems>>;
+type runs = Awaited<ReturnType<typeof getRunsData>>['runs'];
+type clarifications = Awaited<ReturnType<typeof getClarifications>>;
+type score = Awaited<ReturnType<typeof getScore>>;
+type allowedProgrammingLanguages = Awaited<
+  ReturnType<typeof getRunsData>
+>['allowedProgrammingLanguages'];
+type problemsIds = Awaited<ReturnType<typeof getRunsData>>['problemsIds'];
 
 export {
   problems,
   getProblems,
   runs,
-  getRuns,
+  allowedProgrammingLanguages,
+  problemsIds,
+  getRunsData,
   clarifications,
   getClarifications,
   score,
   getScore,
-  allowedProgrammingLanguages,
-  getAllowedProgrammingLanguages,
-  problemsIds,
-  getProblemsIds,
 };
