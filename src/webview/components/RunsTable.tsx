@@ -33,6 +33,9 @@ function RunsTable({
   const [warning, setWarning] = React.useState('');
   const timeoutIDRef = React.useRef<NodeJS.Timeout>();
 
+  // using refs instead of state in forms fields (i.e. controlled components) because
+  // it's a simpler approach (https://stackoverflow.com/a/34622774)
+  //
   // refs typing doesn't includes all available properties out-of-the-box
   // https://github.com/microsoft/fast/issues/6909
   const problemsDropdownRef = React.useRef<
@@ -51,6 +54,11 @@ function RunsTable({
         );
       } else if (message.command === 'runs-submitted') {
         setWarning('Run submitted successfully.');
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        problemsDropdownRef.current!.setAttribute('current-value', '-1');
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        languagesDropdownRef.current!.setAttribute('current-value', '-1');
+        setSelectedFilePath(undefined);
         timeoutIDRef.current = setTimeout(() => {
           setWarning('');
         }, 10000);
@@ -64,9 +72,7 @@ function RunsTable({
     });
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
+  function handleSubmit() {
     if (timeoutIDRef.current !== undefined) {
       clearTimeout(timeoutIDRef.current);
     }
@@ -140,7 +146,7 @@ function RunsTable({
         </VSCodeDataGrid>
       )}
 
-      <form onSubmit={handleSubmit}>
+      <form>
         <div>
           <label htmlFor="problemsDropdown">Problem:</label>
           <VSCodeDropdown id="problemsDropdown" ref={problemsDropdownRef}>
@@ -171,7 +177,12 @@ function RunsTable({
 
         <span>{selectedFilePath ?? 'No file chosen.'}</span>
 
-        <VSCodeButton type="submit">Submit</VSCodeButton>
+        {/* previously, event handler `handleSubmit()` was attached to form's `onSubmit`
+        and VSCodeButton had attribute `type` set to `submit`, however this was causing
+        2 problems — `enter` key press while focusing on upload file button was triggering submit
+        and `enter` key press while focusing on submit button was triggering submit twice — ergo,
+        `handleSubmit()` was moved to VSCodeButton's `onClick` */}
+        <VSCodeButton onClick={handleSubmit}>Submit</VSCodeButton>
       </form>
 
       <p>{warning}</p>

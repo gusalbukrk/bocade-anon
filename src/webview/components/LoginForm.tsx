@@ -5,13 +5,13 @@ const LoginForm = ({
 }: {
   vscode: ReturnType<typeof acquireVsCodeApi>;
 }) => {
-  const [isLoginInProgress, setIsLoginInProgress] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
     window.addEventListener('message', (event) => {
       const message = event.data as { command: string };
       if (message.command === 'login-finished') {
-        setIsLoginInProgress(false);
+        setIsLoggingIn(false);
       }
     });
   }, []);
@@ -19,7 +19,7 @@ const LoginForm = ({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setIsLoginInProgress(true);
+    setIsLoggingIn(true);
 
     const get = (name: string) =>
       (event.currentTarget.elements.namedItem(name) as HTMLInputElement).value;
@@ -46,7 +46,7 @@ const LoginForm = ({
       <input type="text" id="username" name="username" />
       <label htmlFor="password">Password:</label>
       <input type="password" id="password" name="password" />
-      <input type="submit" value="Log in" disabled={isLoginInProgress} />
+      <input type="submit" value="Log in" disabled={isLoggingIn} />
     </form>
   );
 };
