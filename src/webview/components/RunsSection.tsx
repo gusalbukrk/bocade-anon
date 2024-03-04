@@ -14,7 +14,7 @@ import {
   runs,
 } from '../../utils/getData.js';
 
-function RunsTable({
+function RunsSection({
   runs,
   problemsIds,
   allowedProgrammingLanguages,
@@ -31,7 +31,7 @@ function RunsTable({
 }) {
   const [selectedFilePath, setSelectedFilePath] = React.useState<string>();
   const [warning, setWarning] = React.useState('');
-  const timeoutIDRef = React.useRef<NodeJS.Timeout>();
+  const timeoutIdRef = React.useRef<NodeJS.Timeout>();
 
   // using refs instead of state in forms fields (i.e. controlled components) because
   // it's a simpler approach (https://stackoverflow.com/a/34622774)
@@ -59,7 +59,7 @@ function RunsTable({
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         languagesDropdownRef.current!.setAttribute('current-value', '-1');
         setSelectedFilePath(undefined);
-        timeoutIDRef.current = setTimeout(() => {
+        timeoutIdRef.current = setTimeout(() => {
           setWarning('');
         }, 10000);
       }
@@ -73,8 +73,8 @@ function RunsTable({
   }
 
   function handleSubmit() {
-    if (timeoutIDRef.current !== undefined) {
-      clearTimeout(timeoutIDRef.current);
+    if (timeoutIdRef.current !== undefined) {
+      clearTimeout(timeoutIdRef.current);
     }
     setWarning('');
 
@@ -87,7 +87,7 @@ function RunsTable({
 
     if (problem === '-1' || language === '-1' || filePath === undefined) {
       setWarning('All fields are required.');
-      timeoutIDRef.current = setTimeout(() => {
+      timeoutIdRef.current = setTimeout(() => {
         setWarning('');
       }, 10000);
       return;
@@ -102,16 +102,14 @@ function RunsTable({
   }
 
   return (
-    <>
+    <section id="runs">
+      <h2>Runs</h2>
       {runs.length === 0 ? (
         <p>No runs available.</p>
       ) : (
         <VSCodeDataGrid>
-          <VSCodeDataGridRow
-            rowType="header"
-            style={{ textTransform: 'capitalize' }}
-          >
-            {['run', 'time', 'problem', 'language', 'answer', 'file'].map(
+          <VSCodeDataGridRow rowType="header">
+            {['run #', 'time', 'problem', 'language', 'answer', 'file'].map(
               (column, i) => (
                 <VSCodeDataGridCell
                   cellType="columnheader"
@@ -134,11 +132,20 @@ function RunsTable({
                 {run.language}
               </VSCodeDataGridCell>
               <VSCodeDataGridCell gridColumn="5">
-                {run.answer}
+                {run.answer.text}
+                {run.answer.balloon !== null && (
+                  <img
+                    src={run.answer.balloon.url}
+                    alt={run.answer.balloon.color}
+                    title={run.answer.balloon.color}
+                    width="15"
+                    style={{ marginLeft: '.5rem' }}
+                  />
+                )}
               </VSCodeDataGridCell>
               <VSCodeDataGridCell gridColumn="6">
-                <a href={run.file.href} onClick={handleDownloadLinkClick}>
-                  {run.file.name}
+                <a href={run.sourcefile.url} onClick={handleDownloadLinkClick}>
+                  {run.sourcefile.name}
                 </a>
               </VSCodeDataGridCell>
             </VSCodeDataGridRow>
@@ -146,9 +153,18 @@ function RunsTable({
         </VSCodeDataGrid>
       )}
 
-      <form>
-        <div>
-          <label htmlFor="problemsDropdown">Problem:</label>
+      <form
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          rowGap: '.5rem',
+          marginTop: '1rem',
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label htmlFor="problemsDropdown" style={{ marginBottom: '.5rem' }}>
+            Problem
+          </label>
           <VSCodeDropdown id="problemsDropdown" ref={problemsDropdownRef}>
             <VSCodeOption value="-1">--</VSCodeOption>
             {problemsIds.map((problem) => (
@@ -157,8 +173,10 @@ function RunsTable({
           </VSCodeDropdown>
         </div>
 
-        <div>
-          <label htmlFor="languagesDropdown">Language:</label>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label htmlFor="languagesDropdown" style={{ marginBottom: '.5rem' }}>
+            Language
+          </label>
           <VSCodeDropdown id="languagesDropdown" ref={languagesDropdownRef}>
             <VSCodeOption value="-1">--</VSCodeOption>
             {allowedProgrammingLanguages.map((language) => (
@@ -169,10 +187,13 @@ function RunsTable({
 
         <VSCodeButton
           onClick={handleFileUploadButtonClick}
-          style={{ width: '120px' }}
+          appearance="secondary"
         >
           Choose file
-          <span className="codicon codicon-add"></span>
+          <span
+            className="codicon codicon-add"
+            style={{ marginLeft: '.25rem' }}
+          ></span>
         </VSCodeButton>
 
         <span>{selectedFilePath ?? 'No file chosen.'}</span>
@@ -182,12 +203,11 @@ function RunsTable({
         2 problems — `enter` key press while focusing on upload file button was triggering submit
         and `enter` key press while focusing on submit button was triggering submit twice — ergo,
         `handleSubmit()` was moved to VSCodeButton's `onClick` */}
-        <VSCodeButton onClick={handleSubmit}>Submit</VSCodeButton>
+        <VSCodeButton onClick={handleSubmit}>Submit run</VSCodeButton>
       </form>
-
       <p>{warning}</p>
-    </>
+    </section>
   );
 }
 
-export default RunsTable;
+export default RunsSection;

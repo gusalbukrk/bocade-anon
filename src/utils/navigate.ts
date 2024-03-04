@@ -24,7 +24,7 @@ type errorObject = { message: string };
  *
  * @param pagePath relative to `http://${credentials.ip}/boca/`
  */
-async function getPageJSDOM(
+async function getPageJsdom(
   pagePath: string,
   secrets: vscode.SecretStorage,
 ): Promise<JSDOM> {
@@ -39,7 +39,7 @@ async function getPageJSDOM(
     return new JSDOM();
   }
 
-  const url = generateBOCAURL(credentials.ip, pagePath);
+  const url = generateBocaUrl(credentials.ip, pagePath);
 
   const storedCookieJarStr = await secrets.get('cookieJar');
 
@@ -47,7 +47,7 @@ async function getPageJSDOM(
     const storedCookieJarObj = JSON.parse(storedCookieJarStr) as cookieJarObj;
     const storedCookieJar = convertCookieJarObjToCookieJar(storedCookieJarObj);
 
-    const pageJSDOM = await JSDOM.fromURL(url, { cookieJar: storedCookieJar });
+    const pageJsdom = await JSDOM.fromURL(url, { cookieJar: storedCookieJar });
 
     if (isLogoutPath(pagePath)) {
       // in BOCA web dashboard, log out is triggered by visiting index page when user is logged in
@@ -56,19 +56,19 @@ async function getPageJSDOM(
       await secrets.delete('cookieJar');
 
       console.log(
-        `user ${isAuthenticatedInBOCA(pageJSDOM.serialize()) ? 'was' : "wasn't"} logged in with stored cookie jar`,
+        `user ${isAuthenticatedInBoca(pageJsdom.serialize()) ? 'was' : "wasn't"} logged in with stored cookie jar`,
       );
 
       console.log('user logged out successfully');
-      return pageJSDOM;
+      return pageJsdom;
     }
 
-    if (isAuthenticatedInBOCA(pageJSDOM.serialize())) {
+    if (isAuthenticatedInBoca(pageJsdom.serialize())) {
       console.log('user is already logged in with stored cookie jar');
-      return pageJSDOM;
+      return pageJsdom;
     }
 
-    const authenticated = await authenticateInBOCA(
+    const authenticated = await authenticateInBoca(
       credentials,
       getCookieFromCookieJarObj(storedCookieJarObj, 'PHPSESSID') as string,
       storedCookieJar,
@@ -95,12 +95,12 @@ async function getPageJSDOM(
   // visit BOCA index page (`boca/index.php`) because its HTTP response has
   // 2 Set-Cookie headers: PHPSESSID and biscoitobocabombonera
   const newCookieJar = (
-    await JSDOM.fromURL(generateBOCAURL(credentials.ip, 'index.php'))
+    await JSDOM.fromURL(generateBocaUrl(credentials.ip, 'index.php'))
   ).cookieJar;
 
   const newCookieJarObj = newCookieJar.toJSON();
 
-  const authenticated = await authenticateInBOCA(
+  const authenticated = await authenticateInBoca(
     credentials,
     getCookieFromCookieJarObj(newCookieJarObj, 'PHPSESSID') as string,
     newCookieJar,
@@ -150,12 +150,12 @@ async function download(
 
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         response.on('end', async () => {
-          if (!isAuthenticatedInBOCA(responseHtml)) {
+          if (!isAuthenticatedInBoca(responseHtml)) {
             console.log("tried to download a file, but user isn't logged in");
 
             // navigate to a page which requires authentication
             // as a consequence, user will get logged in
-            await getPageJSDOM('team/index.php', secrets);
+            await getPageJsdom('team/index.php', secrets);
 
             await download(url, pathToSave, secrets);
           }
@@ -171,7 +171,7 @@ async function download(
 
 /**
  * login is composed by 3 steps: (1) validate credentials, (2) store credentials in `SecretStorage`
- * and (3) use `getPageJSDOM()` to navigate to a page which requires authentication to trigger
+ * and (3) use `getPageJsdom()` to navigate to a page which requires authentication to trigger
  * BOCA authentication and storage of newly generated cookie jar
  */
 async function logIn(
@@ -197,7 +197,7 @@ async function logIn(
   try {
     // jsdom's `fromURL` doesn't have a timeout option (https://github.com/jsdom/jsdom/issues/2824)
     html = await (
-      await fetch(generateBOCAURL(credentials.ip, 'index.php'), {
+      await fetch(generateBocaUrl(credentials.ip, 'index.php'), {
         signal: AbortSignal.timeout(5000), // will error if request takes longer than 5s
       })
     ).text();
@@ -206,21 +206,21 @@ async function logIn(
   }
 
   const dom = new JSDOM(html);
-  const isBOCAIndexPage =
+  const isBocaIndexPage =
     /^BOCA Online Contest Administrator boca-[.0-9]+ - Login$/.test(
       dom.window.document.title,
     );
 
-  if (!isBOCAIndexPage) {
+  if (!isBocaIndexPage) {
     return { message: "IP doesn't point to a BOCA server" };
   }
 
   await secrets.store('credentials', JSON.stringify(credentials));
 
   try {
-    // getPageJSDOM explicitly throws error if login fails (although, it's also possible
+    // getPageJsdom explicitly throws error if login fails (although, it's also possible
     // it throws other errors); in any case, if it throws, it means credentials are invalid
-    await getPageJSDOM('team/index.php', secrets);
+    await getPageJsdom('team/index.php', secrets);
   } catch (e: unknown) {
     await secrets.delete('credentials');
     return { message: 'invalid credentials' };
@@ -234,22 +234,22 @@ async function logIn(
  * if user is logged in) and clear extension stored data
  */
 async function logOut(secrets: vscode.SecretStorage) {
-  return await getPageJSDOM('index.php', secrets);
+  return await getPageJsdom('index.php', secrets);
 }
 
 /**
- * Submit form to BOCA run page containing source code file and other data.
+ * submit form to a BOCA page
  */
-async function upload(
+async function submitForm(
   secrets: vscode.SecretStorage,
-  path: string,
+  pagePath: string,
   body: FormData,
 ) {
   const headers = new Headers();
   headers.append('Cookie', await getCookieString(secrets));
 
   const res = await fetch(
-    generateBOCAURL((await getCredentials(secrets)).ip, path),
+    generateBocaUrl((await getCredentials(secrets)).ip, pagePath),
     {
       method: 'POST',
       body,
@@ -260,8 +260,8 @@ async function upload(
   return await res.text();
 }
 
-function generateBOCAURL(ip: string, path: string) {
-  return `http://${ip}/boca/${path}`;
+function generateBocaUrl(ip: string, pagePath: string) {
+  return `http://${ip}/boca/${pagePath}`;
 }
 
 /**
@@ -278,7 +278,7 @@ async function getCookieString(secrets: vscode.SecretStorage) {
   if (cookieJarObj === undefined) {
     // navigate to a page which requires authentication
     // as a consequence, user will get logged in
-    await getPageJSDOM('team/index.php', secrets);
+    await getPageJsdom('team/index.php', secrets);
 
     cookieJarStr = await secrets.get('cookieJar');
 
@@ -292,13 +292,13 @@ async function getCookieString(secrets: vscode.SecretStorage) {
   const cookieJar = convertCookieJarObjToCookieJar(cookieJarObj);
 
   const cookieString = cookieJar.getCookieStringSync(
-    generateBOCAURL((await getCredentials(secrets)).ip, ''),
+    generateBocaUrl((await getCredentials(secrets)).ip, ''),
   );
 
   return cookieString;
 }
 
-function isAuthenticatedInBOCA(pageHtml: string) {
+function isAuthenticatedInBoca(pageHtml: string) {
   return !pageHtml.includes(
     "alert('Session expired. You must log in again.');",
   );
@@ -324,7 +324,7 @@ function printCookieJar(cookieJar: jsdom.CookieJar) {
 /**
  * hit BOCA login URL with the suitable query parameters
  */
-async function authenticateInBOCA(
+async function authenticateInBoca(
   credentials: NonNullable<credentials>,
   phpsessid: string,
   cookieJar: jsdom.CookieJar,
@@ -335,7 +335,7 @@ async function authenticateInBOCA(
 
   const loginPageHtml = (
     await JSDOM.fromURL(
-      `${generateBOCAURL(credentials.ip, 'index.php')}?name=${credentials.username}&password=${hashedPassword}`,
+      `${generateBocaUrl(credentials.ip, 'index.php')}?name=${credentials.username}&password=${hashedPassword}`,
       { cookieJar },
     )
   ).serialize();
@@ -355,4 +355,4 @@ function isLogoutPath(path: string) {
   return path === '' || path === 'index.php';
 }
 
-export { logIn, logOut, getPageJSDOM, download, upload };
+export { logIn, logOut, getPageJsdom, download, submitForm };

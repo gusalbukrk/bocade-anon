@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { VSCodeButton } from '@vscode/webview-ui-toolkit/react';
+import {
+  VSCodeButton,
+  VSCodeLink,
+  VSCodeProgressRing,
+} from '@vscode/webview-ui-toolkit/react';
 
 import { credentials } from '../../utils/getCredentials.js';
 import {
@@ -11,12 +15,12 @@ import {
   problemsIds,
 } from '../../utils/getData.js';
 import LoginForm from './LoginForm.js';
-import ProblemsTable from './ProblemsTable.js';
-import RunsTable from './RunsTable.js';
-import ClarificationsTable from './ClarificationsTable.js';
-import ScoreTable from './ScoreTable.js';
+import ProblemsSection from './ProblemsSection.js';
+import RunsSection from './RunsSection.js';
+import ClarificationsSection from './ClarificationsSection.js';
+import ScoreSection from './ScoreSection.js';
 
-type updateUIMessage = {
+type updateUiMessage = {
   command: string;
   credentials: credentials;
   problems?: problems;
@@ -43,7 +47,7 @@ const Dashboard = ({
 
   useEffect(() => {
     window.addEventListener('message', (event) => {
-      const message = event.data as updateUIMessage;
+      const message = event.data as updateUiMessage;
 
       if (message.command === 'update-ui') {
         setCredentials(message.credentials);
@@ -51,6 +55,7 @@ const Dashboard = ({
         if (message.credentials !== null) {
           setProblems(message.problems);
           setRuns(message.runs);
+          console.log(message.runs);
           setClarifications(message.clarifications);
           setScore(message.score);
           setAllowedProgrammingLanguages(message.allowedProgrammingLanguages);
@@ -81,21 +86,46 @@ const Dashboard = ({
 
   return (
     <>
-      {credentials !== undefined &&
-        (credentials === null ? (
+      <header>
+        <h1>BOCA Team Dashboard</h1>
+        {credentials?.username !== undefined && (
+          <>
+            <h3>
+              Logged in as{' '}
+              <span style={{ textDecoration: 'underline' }}>
+                {credentials.username}
+              </span>
+              !
+            </h3>
+            <p>
+              <VSCodeLink href={`http://${credentials.ip}/boca`}>
+                Go to BOCA web dashboard
+              </VSCodeLink>
+            </p>
+            <VSCodeButton
+              appearance="secondary"
+              onClick={handleLogoutButtonClick}
+            >
+              Log Out
+            </VSCodeButton>
+          </>
+        )}
+      </header>
+      <main>
+        {/* if credentials are undefined, they've not been retrieved yet;
+        if null, user isn't logged in */}
+        {credentials === undefined ? (
+          <VSCodeProgressRing></VSCodeProgressRing>
+        ) : credentials === null ? (
           <LoginForm vscode={vscode} />
         ) : (
           <>
-            <VSCodeButton onClick={handleLogoutButtonClick}>
-              Log Out
-            </VSCodeButton>
-
-            <ProblemsTable
+            <ProblemsSection
               problems={problems ?? []}
               handleDownloadLinkClick={handleDownloadLinkClick}
             />
 
-            <RunsTable
+            <RunsSection
               runs={runs ?? []}
               problemsIds={problemsIds ?? []}
               allowedProgrammingLanguages={allowedProgrammingLanguages ?? []}
@@ -103,18 +133,27 @@ const Dashboard = ({
               vscode={vscode}
             />
 
-            <ClarificationsTable
+            <ClarificationsSection
               clarifications={clarifications ?? []}
               problemsIds={problemsIds ?? []}
               vscode={vscode}
             />
 
-            <ScoreTable
+            <ScoreSection
               problemsNames={(problems ?? []).map((p) => p.name)}
               score={score ?? []}
             />
           </>
-        ))}
+        )}
+      </main>
+      <footer>
+        <p>
+          <VSCodeLink href="https://github.com/gusalbukrk">
+            gusalbukrk
+          </VSCodeLink>{' '}
+          @ IF Goiano
+        </p>
+      </footer>
     </>
   );
 };

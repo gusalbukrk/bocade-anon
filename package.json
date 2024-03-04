@@ -1,6 +1,6 @@
 {
-  "name": "hello-world",
-  "displayName": "hello-world",
+  "name": "boca-team-dashboard",
+  "displayName": "BOCA Team Dashboard",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "hello-world.helloWorld",
-        "title": "Hello World"
+        "command": "boca-team-dashboard.open",
+        "title": "Open BOCA Team Dashboard"
       }
     ]
   },

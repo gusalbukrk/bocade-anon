@@ -1,16 +1,15 @@
 import * as vscode from 'vscode';
-import { HelloWorldPanel } from './panels/HelloWorldPanel';
+import BocaTeamDashboard from './panels/BocaTeamDashboard';
 
 export function activate(context: vscode.ExtensionContext) {
-  const helloCommand = vscode.commands.registerCommand(
-    'hello-world.helloWorld',
+  const command = vscode.commands.registerCommand(
+    'boca-team-dashboard.open',
     () => {
-      HelloWorldPanel.render(context.extensionUri, context.secrets);
+      BocaTeamDashboard.render(context.extensionUri, context.secrets);
     },
   );
 
-  context.subscriptions.push(helloCommand);
+  context.subscriptions.push(command);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}

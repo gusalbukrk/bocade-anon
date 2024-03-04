@@ -1,22 +1,22 @@
 import * as vscode from 'vscode';
 import jsdom from 'jsdom';
-import { getPageJSDOM } from '../utils/navigate';
+import { getPageJsdom } from '../utils/navigate';
 import getCredentials from './getCredentials';
 
 async function getProblems(secrets: vscode.SecretStorage) {
-  const problemsPageJSDOM = await getPageJSDOM('team/problem.php', secrets);
+  const problemsPageJsdom = await getPageJsdom('team/problem.php', secrets);
 
   const problemsTableRows = [
-    ...problemsPageJSDOM.window.document.querySelectorAll(
-      'table:nth-of-type(3) tr',
+    ...problemsPageJsdom.window.document.querySelectorAll(
+      // problem table always have at least 1 row (header row) which mustn't be included in return
+      // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/problem.php#L54
+      'table:nth-of-type(3) tr:not(:first-child)',
     ),
   ];
 
   const ip = (await getCredentials(secrets)).ip;
 
-  // problem table always have at least 1 row (header row) which must be excluded from return
-  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/problem.php#L54
-  const problems = problemsTableRows.slice(1).map((tr) => {
+  const problems = problemsTableRows.map((tr) => {
     const tds = tr.querySelectorAll('td');
 
     /* eslint-disable @typescript-eslint/no-non-null-assertion */
@@ -25,12 +25,14 @@ async function getProblems(secrets: vscode.SecretStorage) {
     // exists, returns string (empty string if attribute has no value)
     return {
       name: tds[0].textContent!.trim(),
-      // there'll always be a balloon img, even if admin didn't specified a color code
-      // for the problem (in this case, balloon is transparent)
-      balloon: `http://${ip}${tds[0].querySelector('img')!.getAttribute('src')!}`,
-      // balloon img will always have an alt attribute
-      // (although it'll be empty if admin din't specified the color name)
-      color: tds[0].querySelector('img')!.getAttribute('alt')!,
+      balloon: {
+        // there'll always be a balloon img, even if admin didn't specified a color code
+        // for the problem (in this case, balloon is transparent)
+        url: `http://${ip}${tds[0].querySelector('img')!.getAttribute('src')!}`,
+        // balloon img will always have an alt attribute
+        // (although it'll be empty if admin din't specified the color name)
+        color: tds[0].querySelector('img')!.getAttribute('alt')!,
+      },
       // problems packages must always include a `description/problem.info` file containing
       // both basename and fullname, otherwise the problem won't show up in the teams problems
       // and will show up in the admin problems table with fullname `PROBLEM PACKAGE SEEMS INVALID`
@@ -42,7 +44,7 @@ async function getProblems(secrets: vscode.SecretStorage) {
           ? null
           : {
               name: tds[3].querySelector('a')!.textContent!,
-              href: `http://${ip}/boca${tds[3]
+              url: `http://${ip}/boca${tds[3]
                 .querySelector('a')!
                 .getAttribute('href')!
                 .replace(/^\.{2,}/, '')}`,
@@ -54,19 +56,22 @@ async function getProblems(secrets: vscode.SecretStorage) {
   return problems;
 }
 
-function getRuns(runsPageJSDOM: jsdom.JSDOM, ip: string) {
+function getRuns(runsPageJsdom: jsdom.JSDOM, ip: string) {
   const runsTableRows = [
-    ...runsPageJSDOM.window.document.querySelectorAll(
-      'table:nth-of-type(3) tr',
+    ...runsPageJsdom.window.document.querySelectorAll(
+      // runs table always have at least 1 row (header row) which mustn't be included in return
+      // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/run.php#L321
+      'table:nth-of-type(3) tr:not(:first-child)',
     ),
   ];
 
-  // runs table always have at least 1 row (header row) which must be excluded from return
-  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/run.php#L321
-  const runs = runsTableRows.slice(1).map((tr) => {
+  const runs = runsTableRows.map((tr) => {
     const tds = tr.querySelectorAll('td');
 
     /* eslint-disable @typescript-eslint/no-non-null-assertion */
+    const answerText = tds[4].textContent!.trim(); // it has trailing space when is 'YES'
+    const answerImg = tds[4].querySelector('img')!;
+    //
     // `.textContent` only returns null in rare cases, usually return is a string (may be empty);
     // `.getAttribute()` only returns null if attribute does not exist on element, if attribute
     // exists, it returns a string (empty string if attribute has no value)
@@ -75,10 +80,19 @@ function getRuns(runsPageJSDOM: jsdom.JSDOM, ip: string) {
       time: tds[1].textContent!,
       problem: tds[2].textContent!,
       language: tds[3].textContent!,
-      answer: tds[4].textContent!.trim(), // it has trailing space when is 'YES'
-      file: {
+      answer: {
+        text: answerText,
+        balloon:
+          answerText !== 'YES'
+            ? null
+            : {
+                url: `http://${ip}${answerImg.getAttribute('src')!}`,
+                color: answerImg.getAttribute('alt')!,
+              },
+      },
+      sourcefile: {
         name: tds[5].querySelector('a')!.textContent!.trim(),
-        href: `http://${ip}/boca${tds[5]
+        url: `http://${ip}/boca${tds[5]
           .querySelector('a')!
           .getAttribute('href')!
           .replace(/^\.{2,}/, '')}`,
@@ -90,22 +104,20 @@ function getRuns(runsPageJSDOM: jsdom.JSDOM, ip: string) {
   return runs;
 }
 
-function getAllowedProgrammingLanguages(runsPageJSDOM: jsdom.JSDOM) {
+function getAllowedProgrammingLanguages(runsPageJsdom: jsdom.JSDOM) {
   const runsFormLanguageOptions = [
-    ...runsPageJSDOM.window.document.querySelectorAll<HTMLOptionElement>(
-      'form select[name="language"] option',
+    ...runsPageJsdom.window.document.querySelectorAll<HTMLOptionElement>(
+      // first select option is the default one and it has no valid value (i.e. -1)
+      'form select[name="language"] option:not(:first-child)',
     ),
   ];
 
-  // first select option is the default one and it has no valid value (i.e. -1)
-  const allowedProgrammingLanguages = runsFormLanguageOptions
-    .slice(1)
-    .map((option) => {
-      return {
-        id: option.value,
-        name: option.text,
-      };
-    });
+  const allowedProgrammingLanguages = runsFormLanguageOptions.map((option) => {
+    return {
+      id: option.value,
+      name: option.text,
+    };
+  });
 
   return allowedProgrammingLanguages;
 }
@@ -115,15 +127,15 @@ function getAllowedProgrammingLanguages(runsPageJSDOM: jsdom.JSDOM) {
  * https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/problem.php#L64
  * it's only printed in the runs and clarifications forms
  */
-function getProblemsIds(runsPageJSDOM: jsdom.JSDOM) {
+function getProblemsIds(runsPageJsdom: jsdom.JSDOM) {
   const runsFormProblemsOptions = [
-    ...runsPageJSDOM.window.document.querySelectorAll<HTMLOptionElement>(
-      'form select[name="problem"] option',
+    ...runsPageJsdom.window.document.querySelectorAll<HTMLOptionElement>(
+      // first select option is the default one and it has no valid value (i.e. -1)
+      'form select[name="problem"] option:not(:first-child)',
     ),
   ];
 
-  // first select option is the default one and it has no valid value (i.e. -1)
-  const problemsIds = runsFormProblemsOptions.slice(1).map((option) => ({
+  const problemsIds = runsFormProblemsOptions.map((option) => ({
     id: option.value,
     name: option.text,
   }));
@@ -135,27 +147,27 @@ function getProblemsIds(runsPageJSDOM: jsdom.JSDOM) {
  * get all relevant data from `team/run.php` page (runs, allowed programming languages, problems ids)
  */
 async function getRunsData(secrets: vscode.SecretStorage) {
-  const runsPageJSDOM = await getPageJSDOM('team/run.php', secrets);
+  const runsPageJsdom = await getPageJsdom('team/run.php', secrets);
 
   return {
-    runs: getRuns(runsPageJSDOM, (await getCredentials(secrets)).ip),
-    allowedProgrammingLanguages: getAllowedProgrammingLanguages(runsPageJSDOM),
-    problemsIds: getProblemsIds(runsPageJSDOM),
+    runs: getRuns(runsPageJsdom, (await getCredentials(secrets)).ip),
+    allowedProgrammingLanguages: getAllowedProgrammingLanguages(runsPageJsdom),
+    problemsIds: getProblemsIds(runsPageJsdom),
   };
 }
 
 async function getClarifications(secrets: vscode.SecretStorage) {
-  const clarificationsPageJSDOM = await getPageJSDOM('team/clar.php', secrets);
+  const clarificationsPageJsdom = await getPageJsdom('team/clar.php', secrets);
 
   const clarificationsTableRows = [
-    ...clarificationsPageJSDOM.window.document.querySelectorAll(
-      'table:nth-of-type(3) tr',
+    ...clarificationsPageJsdom.window.document.querySelectorAll(
+      // clarifications table always have at least 1 row (header row) which mustn't be included in return
+      // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/clar.php#L35
+      'table:nth-of-type(3) tr:not(:first-child)',
     ),
   ];
 
-  // clarifications table always have at least 1 row (header row) which must be excluded from return
-  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/team/clar.php#L35
-  const clarifications = clarificationsTableRows.slice(1).map((tr) => {
+  const clarifications = clarificationsTableRows.map((tr) => {
     const tds = tr.querySelectorAll('td');
 
     /* eslint-disable @typescript-eslint/no-non-null-assertion */
@@ -177,11 +189,11 @@ async function getClarifications(secrets: vscode.SecretStorage) {
 }
 
 async function getScore(secrets: vscode.SecretStorage) {
-  const scorePageJSDOM = await getPageJSDOM('team/score.php', secrets);
+  const scorePageJsdom = await getPageJsdom('team/score.php', secrets);
 
   const scoreTableRows = [
-    ...scorePageJSDOM.window.document.querySelectorAll(
-      'table:nth-of-type(3) tr',
+    ...scorePageJsdom.window.document.querySelectorAll(
+      'table:nth-of-type(3) tr:not(:first-child)',
     ),
   ];
 
@@ -192,7 +204,7 @@ async function getScore(secrets: vscode.SecretStorage) {
   // score table will never be empty, it'll have at least 2 lines: a header and (at least) a team
   // because as long there're teams registered in a competition (and they've logged in), they'll
   // show up in the score table even if they haven't solved any problem or even if scoreboard is frozen
-  const score = scoreTableRows.slice(1).map((tr) => {
+  const score = scoreTableRows.map((tr) => {
     const tds = [...tr.querySelectorAll('td')];
 
     /* eslint-disable @typescript-eslint/no-non-null-assertion */
@@ -235,8 +247,10 @@ async function getScore(secrets: vscode.SecretStorage) {
 
         return {
           text,
-          balloon: `http://${ip}${img.getAttribute('src')}`,
-          color: img.getAttribute('alt')!.replace(/:$/, ''),
+          balloon: {
+            url: `http://${ip}${img.getAttribute('src')}`,
+            color: img.getAttribute('alt')!.replace(/:$/, ''),
+          },
         };
       }),
       // even if team hasn't scored, textContent won't be empty (will contain '0 (0)')

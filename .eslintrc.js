@@ -8,13 +8,6 @@ module.exports = {
   },
   plugins: ['@typescript-eslint'],
   rules: {
-    '@typescript-eslint/naming-convention': [
-      'warn',
-      {
-        selector: 'import',
-        format: ['camelCase', 'PascalCase'],
-      },
-    ],
     '@typescript-eslint/semi': 'warn',
     curly: 'warn',
     eqeqeq: 'warn',
@@ -41,5 +34,22 @@ module.exports = {
     //   extends: ['plugin:@typescript-eslint/disable-type-checked'],
     //   files: ['./**/*.{js,mjs}'],
     // },
+    {
+      files: ['./src/**/*'],
+      rules: {
+        '@typescript-eslint/naming-convention': [
+          'error',
+          {
+            selector: 'default',
+            format: ['strictCamelCase', 'StrictPascalCase'],
+          },
+          {
+            selector: ['classMethod', 'classProperty'],
+            format: ['strictCamelCase', 'StrictPascalCase'],
+            leadingUnderscore: 'allow',
+          },
+        ],
+      },
+    },
   ],
 };

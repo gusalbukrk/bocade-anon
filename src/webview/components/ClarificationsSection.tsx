@@ -11,7 +11,7 @@ import {
 
 import { clarifications, problemsIds } from '../../utils/getData.js';
 
-function ClarificationsTable({
+function ClarificationsSection({
   clarifications,
   problemsIds,
   vscode,
@@ -21,7 +21,7 @@ function ClarificationsTable({
   vscode: ReturnType<typeof acquireVsCodeApi>;
 }) {
   const [warning, setWarning] = React.useState('');
-  const timeoutIDRef = React.useRef<NodeJS.Timeout>();
+  const timeoutIdRef = React.useRef<NodeJS.Timeout>();
 
   // using refs instead of state in forms fields (i.e. controlled components) because
   // it's a simpler approach (https://stackoverflow.com/a/34622774)
@@ -44,7 +44,7 @@ function ClarificationsTable({
         problemsDropdownRef.current!.setAttribute('current-value', '0');
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         questionTextAreaRef.current!.setAttribute('current-value', '');
-        timeoutIDRef.current = setTimeout(() => {
+        timeoutIdRef.current = setTimeout(() => {
           setWarning('');
         }, 10000);
       }
@@ -52,8 +52,8 @@ function ClarificationsTable({
   }, []);
 
   function handleSubmit() {
-    if (timeoutIDRef.current !== undefined) {
-      clearTimeout(timeoutIDRef.current);
+    if (timeoutIdRef.current !== undefined) {
+      clearTimeout(timeoutIdRef.current);
     }
     setWarning('');
 
@@ -66,7 +66,7 @@ function ClarificationsTable({
 
     if (question === '') {
       setWarning('Question field cannot be empty.');
-      timeoutIDRef.current = setTimeout(() => {
+      timeoutIdRef.current = setTimeout(() => {
         setWarning('');
       }, 10000);
 
@@ -81,15 +81,13 @@ function ClarificationsTable({
   }
 
   return (
-    <>
+    <section id="clarifications">
+      <h2>Clarifications</h2>
       {clarifications.length === 0 ? (
         <p>No clarifications available.</p>
       ) : (
         <VSCodeDataGrid>
-          <VSCodeDataGridRow
-            rowType="header"
-            style={{ textTransform: 'capitalize' }}
-          >
+          <VSCodeDataGridRow rowType="header">
             {['time', 'problem', 'question', 'answer'].map((column, i) => (
               <VSCodeDataGridCell
                 cellType="columnheader"
@@ -114,12 +112,14 @@ function ClarificationsTable({
               <VSCodeDataGridCell
                 gridColumn="3"
                 dangerouslySetInnerHTML={{
+                  // eslint-disable-next-line @typescript-eslint/naming-convention
                   __html: clarification.question.replace(/\n/g, '</br>'),
                 }}
               ></VSCodeDataGridCell>
               <VSCodeDataGridCell
                 gridColumn="4"
                 dangerouslySetInnerHTML={{
+                  // eslint-disable-next-line @typescript-eslint/naming-convention
                   __html: clarification.answer.replace(/\n/g, '</br>'),
                 }}
               ></VSCodeDataGridCell>
@@ -128,10 +128,25 @@ function ClarificationsTable({
         </VSCodeDataGrid>
       )}
 
-      <form>
-        <div>
-          <label htmlFor="problemsDropdown">Problem:</label>
-          <VSCodeDropdown id="problemsDropdown" ref={problemsDropdownRef}>
+      <form
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          rowGap: '.5rem',
+          marginTop: '1rem',
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label
+            htmlFor="clarificationsProblemsDropdown"
+            style={{ marginBottom: '.5rem' }}
+          >
+            Problem
+          </label>
+          <VSCodeDropdown
+            id="clarificationsProblemsDropdown"
+            ref={problemsDropdownRef}
+          >
             <VSCodeOption value="0">General</VSCodeOption>
             {problemsIds.map((problem) => (
               <VSCodeOption value={problem.id}>{problem.name}</VSCodeOption>
@@ -139,21 +154,22 @@ function ClarificationsTable({
           </VSCodeDropdown>
         </div>
 
-        <VSCodeTextArea ref={questionTextAreaRef}>Question</VSCodeTextArea>
+        <VSCodeTextArea ref={questionTextAreaRef} rows={5}>
+          Question
+        </VSCodeTextArea>
 
         {/* previously, event handler `handleSubmit()` was attached to form's `onSubmit`
         and VSCodeButton had attribute `type` set to `submit`, however this was causing
         2 problems — `enter` key press while editing textarea was triggering submit
         and `enter` key press while focusing on submit button was triggering submit twice — ergo,
         `handleSubmit()` was moved to VSCodeButton's `onClick` */}
-        <VSCodeButton onClick={handleSubmit}>Submit</VSCodeButton>
+        <VSCodeButton onClick={handleSubmit}>Submit clarification</VSCodeButton>
       </form>
-
       <p>{warning}</p>
-    </>
+    </section>
   );
 
   return;
 }
 
-export default ClarificationsTable;
+export default ClarificationsSection;

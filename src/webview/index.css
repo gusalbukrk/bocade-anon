@@ -1,0 +1,17 @@
+section {
+  margin-top: 2rem;
+}
+
+section > h2 {
+  margin-bottom: 1rem;
+}
+
+/* `main:has(#problems)` means wait for BOCA data to be loaded to apply the following styles */
+main:has(#problems) + footer {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+vscode-data-grid-row[row-type="header"] {
+  text-transform: capitalize;
+}

@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import getCredentials, { credentials } from '../utils/getCredentials';
 import { getUri } from '../utils/getUri';
 import { getNonce } from '../utils/getNonce';
-import { logIn, logOut, download, upload } from '../utils/navigate';
+import { logIn, logOut, download, submitForm } from '../utils/navigate';
 import {
   getProblems,
   getClarifications,
@@ -15,7 +15,6 @@ import {
 } from '../utils/getData';
 
 type message = { command: string };
-type howdyMessage = { command: 'howdy'; text: string };
 type loginMessage = { command: 'login'; credentials: credentials };
 type downloadMessage = { command: 'download'; name: string; url: string };
 type runsSubmitMessage = {
@@ -30,8 +29,8 @@ type clarificationsSubmitMessage = {
   question: string;
 };
 
-export class HelloWorldPanel {
-  public static currentPanel: HelloWorldPanel | undefined;
+class BocaTeamDashboard {
+  public static currentPanel: BocaTeamDashboard | undefined;
   private readonly _panel: vscode.WebviewPanel;
   private readonly _secrets: vscode.SecretStorage;
   private _disposables: vscode.Disposable[] = [];
@@ -61,17 +60,15 @@ export class HelloWorldPanel {
     extensionUri: vscode.Uri,
     secrets: vscode.SecretStorage,
   ) {
-    if (HelloWorldPanel.currentPanel) {
-      HelloWorldPanel.currentPanel._panel.reveal(vscode.ViewColumn.One);
+    if (BocaTeamDashboard.currentPanel) {
+      BocaTeamDashboard.currentPanel._panel.reveal(vscode.ViewColumn.One);
     } else {
       const panel = vscode.window.createWebviewPanel(
-        'helloworld',
-        'Hello World',
+        'bocaTeamDashboard',
+        'BOCA Team Dashboard',
         vscode.ViewColumn.One,
         {
-          // Enable javascript in the webview
           enableScripts: true,
-          // Restrict the webview to only load resources from the `out` directory
           localResourceRoots: [
             vscode.Uri.joinPath(extensionUri, 'out'),
             vscode.Uri.joinPath(
@@ -84,7 +81,7 @@ export class HelloWorldPanel {
         },
       );
 
-      HelloWorldPanel.currentPanel = new HelloWorldPanel(
+      BocaTeamDashboard.currentPanel = new BocaTeamDashboard(
         panel,
         secrets,
         extensionUri,
@@ -93,7 +90,7 @@ export class HelloWorldPanel {
   }
 
   public dispose() {
-    HelloWorldPanel.currentPanel = undefined;
+    BocaTeamDashboard.currentPanel = undefined;
 
     this._panel.dispose();
 
@@ -109,16 +106,20 @@ export class HelloWorldPanel {
     webview: vscode.Webview,
     extensionUri: vscode.Uri,
   ) {
-    const webviewUri = getUri(webview, extensionUri, [
+    const webviewUriStr = getUri(webview, extensionUri, [
       'out',
       'webview.js',
     ]).toString();
-    const codiconsUri = getUri(webview, extensionUri, [
+    const stylesheetUriStr = getUri(webview, extensionUri, [
+      'out',
+      'index.css',
+    ]).toString();
+    const codiconsUriStr = getUri(webview, extensionUri, [
       'node_modules',
       '@vscode/codicons',
       'dist',
       'codicon.css',
-    ]);
+    ]).toString(true);
 
     const nonce = getNonce();
 
@@ -129,12 +130,13 @@ export class HelloWorldPanel {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; img-src ${webview.cspSource} https: http:; script-src 'nonce-${nonce}';">
-          <link href="${codiconsUri.toString(true)}" rel="stylesheet" />
-          <title>Hello World!</title>
+          <link href="${stylesheetUriStr}" rel="stylesheet" />
+          <link href="${codiconsUriStr}" rel="stylesheet" />
+          <title>BOCA Team Dashboard</title>
         </head>
         <body>
           <div id="root"></div>
-          <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
+          <script type="module" nonce="${nonce}" src="${webviewUriStr}"></script>
         </body>
       </html>
     `;
@@ -144,14 +146,8 @@ export class HelloWorldPanel {
     webview.onDidReceiveMessage(
       async (message: message) => {
         switch (message.command) {
-          case 'howdy': // howdy button was clicked
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            vscode.window.showInformationMessage(
-              (message as howdyMessage).text,
-            );
-            return;
           case 'loaded': // window on load event has just been triggered
-            await updateUI(this._secrets, this._panel);
+            await updateUi(this._secrets, this._panel);
             return;
           case 'login': // login form has been submitted
             const errorObject = await logIn(
@@ -159,7 +155,7 @@ export class HelloWorldPanel {
               this._secrets,
             );
 
-            await updateUI(this._secrets, this._panel);
+            await updateUi(this._secrets, this._panel);
 
             if (errorObject === null) {
               // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -178,7 +174,7 @@ export class HelloWorldPanel {
             return;
           case 'logout': // logout button was clicked
             await logOut(this._secrets);
-            await updateUI(this._secrets, this._panel);
+            await updateUi(this._secrets, this._panel);
             return;
           case 'download': // user clicked on a link to download a pdf
             const pathToSave =
@@ -200,7 +196,7 @@ export class HelloWorldPanel {
             return;
           case 'runs-submit':
             const {
-              problem: rProblem,
+              problem: runProblem,
               language,
               filePath,
             } = message as runsSubmitMessage;
@@ -213,24 +209,24 @@ export class HelloWorldPanel {
               { type: mime.lookup(path.extname(filePath)) || '' },
             );
 
-            const rBody = new FormData();
-            rBody.append('confirmation', 'confirm');
-            rBody.append('problem', rProblem);
-            rBody.append('language', language);
+            const runsFormBody = new FormData();
+            runsFormBody.append('confirmation', 'confirm');
+            runsFormBody.append('problem', runProblem);
+            runsFormBody.append('language', language);
             // may trigger warning `ExperimentalWarning: buffer.File is an experimental feature`;
             // as you can see here https://nodejs.org/api/buffer.html#class-file,
             // API is no longer experimental as of v20
             // (to check which Node version VS Code is running on, go to Help > About)
-            rBody.append('sourcefile', blob, path.basename(filePath));
-            rBody.append('Submit', 'Send');
+            runsFormBody.append('sourcefile', blob, path.basename(filePath));
+            runsFormBody.append('Submit', 'Send');
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const rUploadHtmlResponse = await upload(
+            const runsSubmissionHtmlResponse = await submitForm(
               this._secrets,
               'team/run.php',
-              rBody,
+              runsFormBody,
             );
-            console.log(rUploadHtmlResponse);
+            console.log(runsSubmissionHtmlResponse);
 
             await this._panel.webview.postMessage({
               command: 'runs-submitted',
@@ -238,22 +234,22 @@ export class HelloWorldPanel {
 
             return;
           case 'clarifications-submit':
-            const { problem: cProblem, question } =
+            const { problem: clarificationProblem, question } =
               message as clarificationsSubmitMessage;
 
-            const cBody = new FormData();
-            cBody.append('confirmation', 'confirm');
-            cBody.append('problem', cProblem);
-            cBody.append('message', question);
-            cBody.append('Submit', 'Send');
+            const clarificationsFormBody = new FormData();
+            clarificationsFormBody.append('confirmation', 'confirm');
+            clarificationsFormBody.append('problem', clarificationProblem);
+            clarificationsFormBody.append('message', question);
+            clarificationsFormBody.append('Submit', 'Send');
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const cUploadHtmlResponse = await upload(
+            const clarificationsSubmissionHtmlResponse = await submitForm(
               this._secrets,
               'team/clar.php',
-              cBody,
+              clarificationsFormBody,
             );
-            console.log(cUploadHtmlResponse);
+            console.log(clarificationsSubmissionHtmlResponse);
 
             await this._panel.webview.postMessage({
               command: 'clarifications-submitted',
@@ -264,6 +260,25 @@ export class HelloWorldPanel {
             const files = await vscode.window.showOpenDialog({
               openLabel: 'Select file',
               title: 'File dialog',
+              canSelectMany: false,
+              filters: {
+                // eslint-disable-next-line @typescript-eslint/naming-convention
+                'Source code': [
+                  'c',
+                  'cc',
+                  'cpp',
+                  'cxx',
+                  'java',
+                  'py',
+                  'py2',
+                  'py3',
+                  'kt',
+                  'kts',
+                  'js',
+                  'cjs',
+                  'mjs',
+                ],
+              },
             });
 
             await this._panel.webview.postMessage({
@@ -284,7 +299,7 @@ export class HelloWorldPanel {
  * post `update-ui` event to the webview; additionally,
  * if there're credentials stored, send some data for the webview to display
  */
-async function updateUI(
+async function updateUi(
   secrets: vscode.SecretStorage,
   panel: vscode.WebviewPanel,
 ) {
@@ -323,3 +338,5 @@ async function inspectSecretStorage(secrets: vscode.SecretStorage) {
     cookieJar: await secrets.get('cookieJar'),
   });
 }
+
+export default BocaTeamDashboard;
