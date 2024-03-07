@@ -153,59 +153,55 @@ function RunsSection({
         </VSCodeDataGrid>
       )}
 
-      <form
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          rowGap: '.5rem',
-          marginTop: '1rem',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label htmlFor="problemsDropdown" style={{ marginBottom: '.5rem' }}>
-            Problem
-          </label>
-          <VSCodeDropdown id="problemsDropdown" ref={problemsDropdownRef}>
-            <VSCodeOption value="-1">--</VSCodeOption>
-            {problemsIds.map((problem) => (
-              <VSCodeOption value={problem.id}>{problem.name}</VSCodeOption>
-            ))}
-          </VSCodeDropdown>
-        </div>
+      <aside className="form-container">
+        <h3>Submit new run</h3>
 
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label htmlFor="languagesDropdown" style={{ marginBottom: '.5rem' }}>
-            Language
-          </label>
-          <VSCodeDropdown id="languagesDropdown" ref={languagesDropdownRef}>
-            <VSCodeOption value="-1">--</VSCodeOption>
-            {allowedProgrammingLanguages.map((language) => (
-              <VSCodeOption value={language.id}>{language.name}</VSCodeOption>
-            ))}
-          </VSCodeDropdown>
-        </div>
+        <form>
+          <div>
+            <label htmlFor="problemsDropdown">Problem</label>
+            <VSCodeDropdown id="problemsDropdown" ref={problemsDropdownRef}>
+              <VSCodeOption value="-1">--</VSCodeOption>
+              {problemsIds.map((problem) => (
+                <VSCodeOption value={problem.id}>{problem.name}</VSCodeOption>
+              ))}
+            </VSCodeDropdown>
+          </div>
 
-        <VSCodeButton
-          onClick={handleFileUploadButtonClick}
-          appearance="secondary"
-        >
-          Choose file
-          <span
-            className="codicon codicon-add"
-            style={{ marginLeft: '.25rem' }}
-          ></span>
-        </VSCodeButton>
+          <div>
+            <label htmlFor="languagesDropdown">Language</label>
+            <VSCodeDropdown id="languagesDropdown" ref={languagesDropdownRef}>
+              <VSCodeOption value="-1">--</VSCodeOption>
+              {allowedProgrammingLanguages.map((language) => (
+                <VSCodeOption value={language.id}>{language.name}</VSCodeOption>
+              ))}
+            </VSCodeDropdown>
+          </div>
 
-        <span>{selectedFilePath ?? 'No file chosen.'}</span>
+          <div id="fileUploadDiv">
+            <VSCodeButton
+              onClick={handleFileUploadButtonClick}
+              appearance="secondary"
+            >
+              Choose file
+              <span
+                className="codicon codicon-add"
+                style={{ marginLeft: '.25rem' }}
+              ></span>
+            </VSCodeButton>
 
-        {/* previously, event handler `handleSubmit()` was attached to form's `onSubmit`
+            <span>{selectedFilePath ?? 'No file chosen.'}</span>
+          </div>
+
+          {/* previously, event handler `handleSubmit()` was attached to form's `onSubmit`
         and VSCodeButton had attribute `type` set to `submit`, however this was causing
         2 problems — `enter` key press while focusing on upload file button was triggering submit
         and `enter` key press while focusing on submit button was triggering submit twice — ergo,
         `handleSubmit()` was moved to VSCodeButton's `onClick` */}
-        <VSCodeButton onClick={handleSubmit}>Submit run</VSCodeButton>
-      </form>
-      <p>{warning}</p>
+          <VSCodeButton onClick={handleSubmit}>Submit</VSCodeButton>
+        </form>
+
+        <p>{warning}</p>
+      </aside>
     </section>
   );
 }

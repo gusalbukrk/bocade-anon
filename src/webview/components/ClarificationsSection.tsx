@@ -128,44 +128,37 @@ function ClarificationsSection({
         </VSCodeDataGrid>
       )}
 
-      <form
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          rowGap: '.5rem',
-          marginTop: '1rem',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <label
-            htmlFor="clarificationsProblemsDropdown"
-            style={{ marginBottom: '.5rem' }}
-          >
-            Problem
-          </label>
-          <VSCodeDropdown
-            id="clarificationsProblemsDropdown"
-            ref={problemsDropdownRef}
-          >
-            <VSCodeOption value="0">General</VSCodeOption>
-            {problemsIds.map((problem) => (
-              <VSCodeOption value={problem.id}>{problem.name}</VSCodeOption>
-            ))}
-          </VSCodeDropdown>
-        </div>
+      <aside className="form-container">
+        <h3>Submit new clarification</h3>
 
-        <VSCodeTextArea ref={questionTextAreaRef} rows={5}>
-          Question
-        </VSCodeTextArea>
+        <form>
+          <div>
+            <label htmlFor="clarificationsProblemsDropdown">Problem</label>
+            <VSCodeDropdown
+              id="clarificationsProblemsDropdown"
+              ref={problemsDropdownRef}
+            >
+              <VSCodeOption value="0">General</VSCodeOption>
+              {problemsIds.map((problem) => (
+                <VSCodeOption value={problem.id}>{problem.name}</VSCodeOption>
+              ))}
+            </VSCodeDropdown>
+          </div>
 
-        {/* previously, event handler `handleSubmit()` was attached to form's `onSubmit`
+          <VSCodeTextArea ref={questionTextAreaRef} rows={5}>
+            Question
+          </VSCodeTextArea>
+
+          {/* previously, event handler `handleSubmit()` was attached to form's `onSubmit`
         and VSCodeButton had attribute `type` set to `submit`, however this was causing
         2 problems — `enter` key press while editing textarea was triggering submit
         and `enter` key press while focusing on submit button was triggering submit twice — ergo,
         `handleSubmit()` was moved to VSCodeButton's `onClick` */}
-        <VSCodeButton onClick={handleSubmit}>Submit clarification</VSCodeButton>
-      </form>
-      <p>{warning}</p>
+          <VSCodeButton onClick={handleSubmit}>Submit</VSCodeButton>
+        </form>
+
+        <p>{warning}</p>
+      </aside>
     </section>
   );
 
