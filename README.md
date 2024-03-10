@@ -1,1 +1,1 @@
-# vscode-webview-ui-toolkit + react + tsc + vite example
+# BOCA Team Dashboard - VS Code extension
