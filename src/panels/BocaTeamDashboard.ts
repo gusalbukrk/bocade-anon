@@ -147,6 +147,17 @@ class BocaTeamDashboard {
       async (message: message) => {
         switch (message.command) {
           case 'loaded': // window on load event has just been triggered
+            const credentials = await getCredentials(this._secrets, false);
+
+            if (credentials !== null && credentials.expireAt < Date.now()) {
+              await logOut(this._secrets);
+
+              // eslint-disable-next-line @typescript-eslint/no-floating-promises
+              vscode.window.showErrorMessage(
+                'Credentials expired. Please, log in again.',
+              );
+            }
+
             await updateUi(this._secrets, this._panel);
             return;
           case 'login': // login form has been submitted

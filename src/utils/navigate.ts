@@ -226,6 +226,10 @@ async function logIn(
     return { message: 'invalid credentials' };
   }
 
+  console.log(
+    `credetials saved to secrets, expiration date set to ${new Date(credentials.expireAt).toString()}`,
+  );
+
   return null;
 }
 

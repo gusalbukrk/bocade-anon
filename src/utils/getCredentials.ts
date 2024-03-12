@@ -13,6 +13,7 @@ type credentials =
       ip: string;
       username: string;
       password: string;
+      expireAt: number;
     };
 
 /**

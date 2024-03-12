@@ -24,10 +24,13 @@ const LoginForm = ({
     const get = (name: string) =>
       (event.currentTarget.elements.namedItem(name) as HTMLInputElement).value;
 
+    const ttl = 1000 * 60 * 60 * 1;
+
     const credentials = {
       ip: get('ip'),
       username: get('username'),
       password: get('password'),
+      expireAt: Date.now() + ttl,
     };
 
     if (Object.values(credentials).every((c) => c !== '')) {

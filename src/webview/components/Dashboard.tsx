@@ -55,7 +55,6 @@ const Dashboard = ({
         if (message.credentials !== null) {
           setProblems(message.problems);
           setRuns(message.runs);
-          console.log(message.runs);
           setClarifications(message.clarifications);
           setScore(message.score);
           setAllowedProgrammingLanguages(message.allowedProgrammingLanguages);
