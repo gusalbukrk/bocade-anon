@@ -1,4 +1,4 @@
-import React, { Component, useEffect } from 'react';
+import React, { Component, Dispatch, SetStateAction, useEffect } from 'react';
 import {
   VSCodeDataGrid,
   VSCodeDataGridRow,
@@ -15,10 +15,12 @@ function ClarificationsSection({
   clarifications,
   problemsIds,
   vscode,
+  setIsReloading,
 }: {
   clarifications: clarifications;
   problemsIds: problemsIds;
   vscode: ReturnType<typeof acquireVsCodeApi>;
+  setIsReloading: Dispatch<SetStateAction<boolean>>;
 }) {
   const [warning, setWarning] = React.useState('');
   const timeoutIdRef = React.useRef<NodeJS.Timeout>();
@@ -40,6 +42,9 @@ function ClarificationsSection({
       const message = e.data as { command: string };
       if (message.command === 'clarifications-submitted') {
         setWarning('Clarification submitted successfully.');
+
+        setIsReloading(true);
+
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         problemsDropdownRef.current!.setAttribute('current-value', '0');
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

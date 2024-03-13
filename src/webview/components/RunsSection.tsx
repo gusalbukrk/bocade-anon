@@ -1,4 +1,4 @@
-import React, { Component, useEffect } from 'react';
+import React, { Component, Dispatch, SetStateAction, useEffect } from 'react';
 import {
   VSCodeDataGrid,
   VSCodeDataGridRow,
@@ -20,6 +20,7 @@ function RunsSection({
   allowedProgrammingLanguages,
   handleDownloadLinkClick,
   vscode,
+  setIsReloading,
 }: {
   runs: runs;
   problemsIds: problemsIds;
@@ -28,6 +29,7 @@ function RunsSection({
     e: React.MouseEvent<HTMLAnchorElement> & { target: HTMLAnchorElement },
   ) => void;
   vscode: ReturnType<typeof acquireVsCodeApi>;
+  setIsReloading: Dispatch<SetStateAction<boolean>>;
 }) {
   const [selectedFilePath, setSelectedFilePath] = React.useState<string>();
   const [warning, setWarning] = React.useState('');
@@ -54,6 +56,9 @@ function RunsSection({
         );
       } else if (message.command === 'runs-submitted') {
         setWarning('Run submitted successfully.');
+
+        setIsReloading(true);
+
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         problemsDropdownRef.current!.setAttribute('current-value', '-1');
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -139,7 +144,6 @@ function RunsSection({
                     alt={run.answer.balloon.color}
                     title={run.answer.balloon.color}
                     width="15"
-                    style={{ marginLeft: '.5rem' }}
                   />
                 )}
               </VSCodeDataGridCell>
@@ -183,10 +187,7 @@ function RunsSection({
               appearance="secondary"
             >
               Choose file
-              <span
-                className="codicon codicon-add"
-                style={{ marginLeft: '.25rem' }}
-              ></span>
+              <span className="codicon codicon-add"></span>
             </VSCodeButton>
 
             <span>{selectedFilePath ?? 'No file chosen.'}</span>

@@ -61,7 +61,7 @@ class BocaTeamDashboard {
     secrets: vscode.SecretStorage,
   ) {
     if (BocaTeamDashboard.currentPanel) {
-      BocaTeamDashboard.currentPanel._panel.reveal(vscode.ViewColumn.One);
+      BocaTeamDashboard.currentPanel._panel.reveal();
     } else {
       const panel = vscode.window.createWebviewPanel(
         'bocaTeamDashboard',
@@ -78,6 +78,7 @@ class BocaTeamDashboard {
               'dist',
             ),
           ],
+          retainContextWhenHidden: true,
         },
       );
 
@@ -147,18 +148,10 @@ class BocaTeamDashboard {
       async (message: message) => {
         switch (message.command) {
           case 'loaded': // window on load event has just been triggered
-            const credentials = await getCredentials(this._secrets, false);
-
-            if (credentials !== null && credentials.expireAt < Date.now()) {
-              await logOut(this._secrets);
-
-              // eslint-disable-next-line @typescript-eslint/no-floating-promises
-              vscode.window.showErrorMessage(
-                'Credentials expired. Please, log in again.',
-              );
-            }
-
-            await updateUi(this._secrets, this._panel);
+            await updateData(this._secrets, this._panel);
+            return;
+          case 'reload':
+            await updateData(this._secrets, this._panel);
             return;
           case 'login': // login form has been submitted
             const errorObject = await logIn(
@@ -166,7 +159,7 @@ class BocaTeamDashboard {
               this._secrets,
             );
 
-            await updateUi(this._secrets, this._panel);
+            await updateData(this._secrets, this._panel);
 
             if (errorObject === null) {
               // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -185,9 +178,14 @@ class BocaTeamDashboard {
             return;
           case 'logout': // logout button was clicked
             await logOut(this._secrets);
-            await updateUi(this._secrets, this._panel);
+            await updateData(this._secrets, this._panel);
             return;
           case 'download': // user clicked on a link to download a pdf
+            if (await credentialsExpired(this._secrets)) {
+              await updateData(this._secrets, this._panel);
+              return;
+            }
+
             const pathToSave =
               vscode.workspace.workspaceFolders === undefined
                 ? // if VS Code doesn't have a opened directory, save file in cwd
@@ -206,6 +204,11 @@ class BocaTeamDashboard {
 
             return;
           case 'runs-submit':
+            if (await credentialsExpired(this._secrets)) {
+              await updateData(this._secrets, this._panel);
+              return;
+            }
+
             const {
               problem: runProblem,
               language,
@@ -243,8 +246,19 @@ class BocaTeamDashboard {
               command: 'runs-submitted',
             });
 
+            const { runs } = await getRunsData(this._secrets);
+            await this._panel.webview.postMessage({
+              command: 'update-runs-data',
+              runs,
+            });
+
             return;
           case 'clarifications-submit':
+            if (await credentialsExpired(this._secrets)) {
+              await updateData(this._secrets, this._panel);
+              return;
+            }
+
             const { problem: clarificationProblem, question } =
               message as clarificationsSubmitMessage;
 
@@ -264,6 +278,12 @@ class BocaTeamDashboard {
 
             await this._panel.webview.postMessage({
               command: 'clarifications-submitted',
+            });
+
+            const clarifications = await getClarifications(this._secrets);
+            await this._panel.webview.postMessage({
+              command: 'update-clarifications-data',
+              clarifications,
             });
 
             return;
@@ -307,18 +327,27 @@ class BocaTeamDashboard {
 }
 
 /**
- * post `update-ui` event to the webview; additionally,
- * if there're credentials stored, send some data for the webview to display
+ * post `update-data` event to the Dashboard webview
+ * if there're credentials stored, fetch and send all data to the webview
  */
-async function updateUi(
+async function updateData(
   secrets: vscode.SecretStorage,
   panel: vscode.WebviewPanel,
 ) {
+  if (await credentialsExpired(secrets)) {
+    await logOut(secrets);
+
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    vscode.window.showErrorMessage(
+      'Credentials expired. Please, log in again.',
+    );
+  }
+
   const credentials = await getCredentials(secrets, false);
 
   if (credentials === null) {
     await panel.webview.postMessage({
-      command: 'update-ui',
+      command: 'update-data',
       credentials,
     });
     return;
@@ -331,7 +360,7 @@ async function updateUi(
     await getRunsData(secrets);
 
   await panel.webview.postMessage({
-    command: 'update-ui',
+    command: 'update-data',
     credentials,
     problems,
     runs,
@@ -340,6 +369,11 @@ async function updateUi(
     allowedProgrammingLanguages,
     problemsIds,
   });
+}
+
+async function credentialsExpired(secrets: vscode.SecretStorage) {
+  const credentials = await getCredentials(secrets, false);
+  return credentials !== null && credentials.expireAt <= Date.now();
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

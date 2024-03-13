@@ -5,6 +5,35 @@
   --spacing-between-form-element-and-label: calc(var(--spacing-between-form-elements) / 2);
 }
 
+header {
+  > div:first-child {
+    display: flex;
+    align-items: center;
+
+    h1 {
+      margin-right: .5rem;
+    }
+
+    vscode-button {
+      margin-right: .25rem;
+
+      span {
+        font-size: 1.25rem !important;
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+    }
+
+    > span {
+      font-size: .8rem;
+    }
+  }
+
+  h3 span {
+    text-decoration: underline;
+  }
+}
+
 main {
   // wait for BOCA data to be loaded to apply the following styles to footer
   &:has(#problems) + footer {
@@ -53,18 +82,28 @@ main {
   }
 }
 
-#runs form div#fileUploadDiv {
-  flex-direction: row;
-  align-items: center;
-  column-gap: 1rem;
-
-  vscode-button {
-    flex-shrink: 0;
+#runs {
+  vscode-data-grid vscode-data-grid-cell:nth-child(5) img {
+    margin-left: .5rem;
   }
 
-  span {
-    overflow-x: hidden;
-    overflow-wrap: break-word;
+  form div#fileUploadDiv {
+    flex-direction: row;
+    align-items: center;
+    column-gap: 1rem;
+
+    vscode-button {
+      flex-shrink: 0;
+
+      span {
+        margin-left: .25rem;
+      }
+    }
+
+    span {
+      overflow-x: hidden;
+      overflow-wrap: break-word;
+    }
   }
 }
 

@@ -20,8 +20,8 @@ import RunsSection from './RunsSection.js';
 import ClarificationsSection from './ClarificationsSection.js';
 import ScoreSection from './ScoreSection.js';
 
-type updateUiMessage = {
-  command: string;
+type updateDataMessage = {
+  command: 'update-data';
   credentials: credentials;
   problems?: problems;
   runs?: runs;
@@ -29,6 +29,16 @@ type updateUiMessage = {
   score?: score;
   allowedProgrammingLanguages?: allowedProgrammingLanguages;
   problemsIds: problemsIds;
+};
+
+type updateClarificationsDataMessage = {
+  command: 'update-clarifications-data';
+  clarifications: clarifications;
+};
+
+type updateRunsDataMessage = {
+  command: 'update-runs-data';
+  runs: runs;
 };
 
 const Dashboard = ({
@@ -44,25 +54,81 @@ const Dashboard = ({
   const [allowedProgrammingLanguages, setAllowedProgrammingLanguages] =
     useState<allowedProgrammingLanguages>();
   const [problemsIds, setProblemsIds] = useState<problemsIds>();
+  const [isReloading, setIsReloading] = useState(false);
+  const [showReloadedWarning, setShowReloadedWarning] = useState(false);
+
+  // `setInterval` is being re-set after every `credentials` update to avoid stale closure
+  // https://dmitripavlutin.com/react-hooks-stale-closures/
+  // dependencies array only contains `credentials`, because
+  // it's the only outer variable used inside callback function
+  useEffect(() => {
+    let id: NodeJS.Timeout;
+    if (credentials !== undefined && credentials !== null) {
+      id = setInterval(() => {
+        setIsReloading(true);
+        vscode.postMessage({ command: 'reload' });
+      }, 15000);
+    }
+
+    return () => {
+      clearInterval(id);
+    };
+  }, [credentials]);
+
+  // event handler is being re-set after every `isReloading` update to avoid stale closure
+  // https://dmitripavlutin.com/react-hooks-stale-closures/
+  // dependencies array only contains `isReloading`, because
+  // it's the only outer variable used inside handler function
+  useEffect(() => {
+    window.addEventListener('message', messageEventHandler);
+
+    return () => {
+      window.removeEventListener('message', messageEventHandler);
+    };
+  }, [isReloading]);
 
   useEffect(() => {
-    window.addEventListener('message', (event) => {
-      const message = event.data as updateUiMessage;
+    if (showReloadedWarning) {
+      setTimeout(() => {
+        setShowReloadedWarning(false);
+      }, 5000);
+    }
+  }, [showReloadedWarning]);
 
-      if (message.command === 'update-ui') {
-        setCredentials(message.credentials);
+  function messageEventHandler(event: MessageEvent) {
+    const message = event.data as
+      | updateDataMessage
+      | updateClarificationsDataMessage
+      | updateRunsDataMessage;
 
-        if (message.credentials !== null) {
-          setProblems(message.problems);
-          setRuns(message.runs);
-          setClarifications(message.clarifications);
-          setScore(message.score);
-          setAllowedProgrammingLanguages(message.allowedProgrammingLanguages);
-          setProblemsIds(message.problemsIds);
-        }
+    if (message.command === 'update-data') {
+      setCredentials(message.credentials);
+
+      // following properties are optional, so they may be undefined
+      setProblems(message.problems);
+      setRuns(message.runs);
+      setClarifications(message.clarifications);
+      setScore(message.score);
+      setAllowedProgrammingLanguages(message.allowedProgrammingLanguages);
+      setProblemsIds(message.problemsIds);
+
+      if (isReloading) {
+        // conditional ensures won't run on first load
+        setIsReloading(false);
+        setShowReloadedWarning(true);
       }
-    });
-  }, []);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    } else if (message.command === 'update-clarifications-data') {
+      setClarifications(message.clarifications);
+      setIsReloading(false);
+      setShowReloadedWarning(true);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    } else if (message.command === 'update-runs-data') {
+      setRuns(message.runs);
+      setIsReloading(false);
+      setShowReloadedWarning(true);
+    }
+  }
 
   function handleLogoutButtonClick() {
     vscode.postMessage({
@@ -83,18 +149,37 @@ const Dashboard = ({
     });
   }
 
+  function handleReloadButtonClick() {
+    setIsReloading(true);
+    vscode.postMessage({
+      command: 'reload',
+    });
+  }
+
   return (
     <>
       <header>
-        <h1>BOCA Team Dashboard</h1>
+        <div>
+          <h1>BOCA Team Dashboard</h1>
+          {problems !== undefined /* indicates that the data has loaded */ && (
+            <>
+              <VSCodeButton
+                appearance="icon"
+                onClick={handleReloadButtonClick}
+                disabled={isReloading || showReloadedWarning}
+              >
+                <span
+                  className={`codicon codicon-sync ${isReloading ? 'codicon-modifier-spin' : ''}`}
+                ></span>
+              </VSCodeButton>
+              {showReloadedWarning && <span>reloaded</span>}
+            </>
+          )}
+        </div>
         {credentials?.username !== undefined && (
           <>
             <h3>
-              Logged in as{' '}
-              <span style={{ textDecoration: 'underline' }}>
-                {credentials.username}
-              </span>
-              !
+              Logged in as <span>{credentials.username}</span>!
             </h3>
             <p>
               <VSCodeLink href={`http://${credentials.ip}/boca`}>
@@ -130,12 +215,14 @@ const Dashboard = ({
               allowedProgrammingLanguages={allowedProgrammingLanguages ?? []}
               handleDownloadLinkClick={handleDownloadLinkClick}
               vscode={vscode}
+              setIsReloading={setIsReloading}
             />
 
             <ClarificationsSection
               clarifications={clarifications ?? []}
               problemsIds={problemsIds ?? []}
               vscode={vscode}
+              setIsReloading={setIsReloading}
             />
 
             <ScoreSection
