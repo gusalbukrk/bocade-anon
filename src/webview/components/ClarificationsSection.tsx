@@ -40,7 +40,7 @@ function ClarificationsSection({
   useEffect(() => {
     window.addEventListener('message', (e) => {
       const message = e.data as { command: string };
-      if (message.command === 'clarifications-submitted') {
+      if (message.command === 'clarification-submitted') {
         setWarning('Clarification submitted successfully.');
 
         setIsReloading(true);
@@ -79,7 +79,7 @@ function ClarificationsSection({
     }
 
     vscode.postMessage({
-      command: 'clarifications-submit',
+      command: 'submit-clarification',
       problem,
       question,
     });

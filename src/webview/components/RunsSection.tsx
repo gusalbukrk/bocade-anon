@@ -50,11 +50,11 @@ function RunsSection({
   useEffect(() => {
     window.addEventListener('message', (e) => {
       const message = e.data as { command: string };
-      if (message.command === 'picked-file') {
+      if (message.command === 'file-picked') {
         setSelectedFilePath(
           (message as typeof message & { path: string }).path,
         );
-      } else if (message.command === 'runs-submitted') {
+      } else if (message.command === 'run-submitted') {
         setWarning('Run submitted successfully.');
 
         setIsReloading(true);
@@ -99,7 +99,7 @@ function RunsSection({
     }
 
     vscode.postMessage({
-      command: 'runs-submit',
+      command: 'submit-run',
       problem,
       language,
       filePath,

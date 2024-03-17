@@ -6,7 +6,12 @@ import * as vscode from 'vscode';
 import getCredentials, { credentials } from '../utils/getCredentials';
 import { getUri } from '../utils/getUri';
 import { getNonce } from '../utils/getNonce';
-import { logIn, logOut, download, submitForm } from '../utils/navigate';
+import {
+  logIn as logInBase,
+  logOut,
+  download as downloadBase,
+  submitForm,
+} from '../utils/navigate';
 import {
   getProblems,
   getClarifications,
@@ -14,17 +19,17 @@ import {
   getRunsData,
 } from '../utils/getData';
 
-type message = { command: string };
+type message = { command: 'logout' | 'loaded' | 'reload' | 'pick-file' };
 type loginMessage = { command: 'login'; credentials: credentials };
 type downloadMessage = { command: 'download'; name: string; url: string };
-type runsSubmitMessage = {
-  command: 'runs-submit';
+type submitRunMessage = {
+  command: 'submit-run';
   problem: string;
   language: string;
   filePath: string;
 };
-type clarificationsSubmitMessage = {
-  command: 'clarifications-submit';
+type submitClarificationMessage = {
+  command: 'submit-clarification';
   problem: string;
   question: string;
 };
@@ -145,243 +150,225 @@ class BocaTeamDashboard {
 
   private _setWebviewMessageListener(webview: vscode.Webview) {
     webview.onDidReceiveMessage(
-      async (message: message) => {
-        switch (message.command) {
-          case 'loaded': // window on load event has just been triggered
-            await updateData(this._secrets, this._panel);
-            return;
-          case 'reload':
-            await updateData(this._secrets, this._panel);
-            return;
-          case 'login': // login form has been submitted
-            const errorObject = await logIn(
-              (message as loginMessage).credentials,
-              this._secrets,
-            );
+      async (
+        message:
+          | message
+          | loginMessage
+          | downloadMessage
+          | submitClarificationMessage
+          | submitRunMessage,
+      ) => {
+        const { command } = message;
 
-            await updateData(this._secrets, this._panel);
+        if (command === 'login') {
+          await logIn(message);
+        } else if (command === 'logout') {
+          await logOut(this._secrets);
+        } else {
+          const c = await getCredentials(this._secrets, false);
 
-            if (errorObject === null) {
-              // eslint-disable-next-line @typescript-eslint/no-floating-promises
-              vscode.window.showInformationMessage('Logged in successfully!');
-            } else {
-              // eslint-disable-next-line @typescript-eslint/no-floating-promises
-              vscode.window.showErrorMessage(
-                `Login failed. Reason: ${errorObject.message}. Please try again.`,
-              );
-            }
-
-            await this._panel.webview.postMessage({
-              command: 'login-finished',
-            });
-
-            return;
-          case 'logout': // logout button was clicked
+          if (c !== null && c.expireAt <= Date.now()) {
             await logOut(this._secrets);
-            await updateData(this._secrets, this._panel);
-            return;
-          case 'download': // user clicked on a link to download a pdf
-            if (await credentialsExpired(this._secrets)) {
-              await updateData(this._secrets, this._panel);
-              return;
-            }
 
-            const pathToSave =
-              vscode.workspace.workspaceFolders === undefined
-                ? // if VS Code doesn't have a opened directory, save file in cwd
-                  // (i.e. the directory from which VS Code was opened from)
-                  (message as downloadMessage).name
-                : path.join(
-                    vscode.workspace.workspaceFolders[0].uri.fsPath,
-                    (message as downloadMessage).name,
-                  );
-
-            await download(
-              (message as downloadMessage).url,
-              pathToSave,
-              this._secrets,
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            vscode.window.showErrorMessage(
+              'Credentials expired. Please, log in again.',
             );
+          }
+        }
 
-            return;
-          case 'runs-submit':
-            if (await credentialsExpired(this._secrets)) {
-              await updateData(this._secrets, this._panel);
-              return;
-            }
+        const credentials = await getCredentials(this._secrets, false);
+        if (
+          credentials === null // login failed, command is `logout` or credentials were expired
+        ) {
+          await this._panel.webview.postMessage({
+            command: 'update-data',
+            credentials,
+          });
+          return;
+        }
 
-            const {
-              problem: runProblem,
-              language,
-              filePath,
-            } = message as runsSubmitMessage;
-            const blob = new Blob(
-              [readFileSync(filePath, { encoding: 'utf8', flag: 'r' })],
-
-              // options.type is optional (defaults to '')
-              // leave it undefined doesn't appear to break anything
-              // however, it's being defined here just in case
-              { type: mime.lookup(path.extname(filePath)) || '' },
-            );
-
-            const runsFormBody = new FormData();
-            runsFormBody.append('confirmation', 'confirm');
-            runsFormBody.append('problem', runProblem);
-            runsFormBody.append('language', language);
-            // may trigger warning `ExperimentalWarning: buffer.File is an experimental feature`;
-            // as you can see here https://nodejs.org/api/buffer.html#class-file,
-            // API is no longer experimental as of v20
-            // (to check which Node version VS Code is running on, go to Help > About)
-            runsFormBody.append('sourcefile', blob, path.basename(filePath));
-            runsFormBody.append('Submit', 'Send');
-
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const runsSubmissionHtmlResponse = await submitForm(
-              this._secrets,
-              'team/run.php',
-              runsFormBody,
-            );
-            console.log(runsSubmissionHtmlResponse);
-
-            await this._panel.webview.postMessage({
-              command: 'runs-submitted',
-            });
-
-            const { runs } = await getRunsData(this._secrets);
-            await this._panel.webview.postMessage({
-              command: 'update-runs-data',
-              runs,
-            });
-
-            return;
-          case 'clarifications-submit':
-            if (await credentialsExpired(this._secrets)) {
-              await updateData(this._secrets, this._panel);
-              return;
-            }
-
-            const { problem: clarificationProblem, question } =
-              message as clarificationsSubmitMessage;
-
-            const clarificationsFormBody = new FormData();
-            clarificationsFormBody.append('confirmation', 'confirm');
-            clarificationsFormBody.append('problem', clarificationProblem);
-            clarificationsFormBody.append('message', question);
-            clarificationsFormBody.append('Submit', 'Send');
-
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const clarificationsSubmissionHtmlResponse = await submitForm(
-              this._secrets,
-              'team/clar.php',
-              clarificationsFormBody,
-            );
-            console.log(clarificationsSubmissionHtmlResponse);
-
-            await this._panel.webview.postMessage({
-              command: 'clarifications-submitted',
-            });
-
-            const clarifications = await getClarifications(this._secrets);
-            await this._panel.webview.postMessage({
-              command: 'update-clarifications-data',
-              clarifications,
-            });
-
-            return;
-          case 'pick-file': // 'Choose a file' button has been clicked
-            const files = await vscode.window.showOpenDialog({
-              openLabel: 'Select file',
-              title: 'File dialog',
-              canSelectMany: false,
-              filters: {
-                // eslint-disable-next-line @typescript-eslint/naming-convention
-                'Source code': [
-                  'c',
-                  'cc',
-                  'cpp',
-                  'cxx',
-                  'java',
-                  'py',
-                  'py2',
-                  'py3',
-                  'kt',
-                  'kts',
-                  'js',
-                  'cjs',
-                  'mjs',
-                ],
-              },
-            });
-
-            await this._panel.webview.postMessage({
-              command: 'picked-file',
-              path: files?.[0].fsPath,
-            });
-
-            return;
+        if (
+          command === 'login' ||
+          command === 'loaded' ||
+          command === 'reload'
+        ) {
+          await updateData();
+        } else if (command === 'submit-clarification') {
+          await submitClarification(message);
+          await updateClarificationsData();
+        } else if (command === 'submit-run') {
+          await submitRun(message);
+          await updateRunsData();
+        } else if (command === 'download') {
+          await download(message);
+        } else if (command === 'pick-file') {
+          await pickFile();
         }
       },
       undefined,
       this._disposables,
     );
+
+    /** update all data in webview */
+    const updateData = async () => {
+      const credentials = await getCredentials(this._secrets, false);
+      const problems = await getProblems(this._secrets);
+      const clarifications = await getClarifications(this._secrets);
+      const score = await getScore(this._secrets);
+      const { runs, allowedProgrammingLanguages, problemsIds } =
+        await getRunsData(this._secrets);
+
+      await this._panel.webview.postMessage({
+        command: 'update-data',
+        credentials,
+        problems,
+        runs,
+        clarifications,
+        score,
+        allowedProgrammingLanguages,
+        problemsIds,
+      });
+    };
+
+    const updateClarificationsData = async () => {
+      const clarifications = await getClarifications(this._secrets);
+      await this._panel.webview.postMessage({
+        command: 'update-clarifications-data',
+        clarifications,
+      });
+    };
+
+    const updateRunsData = async () => {
+      const { runs } = await getRunsData(this._secrets);
+
+      await this._panel.webview.postMessage({
+        command: 'update-runs-data',
+        runs,
+      });
+    };
+
+    const logIn = async (message: loginMessage) => {
+      const errorObject = await logInBase(message.credentials, this._secrets);
+
+      if (errorObject === null) {
+        await updateData();
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        vscode.window.showInformationMessage('Logged in successfully!');
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        vscode.window.showErrorMessage(
+          `Login failed. Reason: ${errorObject.message}. Please try again.`,
+        );
+      }
+
+      await this._panel.webview.postMessage({
+        command: 'login-finished',
+      });
+    };
+
+    const submitClarification = async (message: submitClarificationMessage) => {
+      const { problem, question } = message;
+
+      const formBody = new FormData();
+      formBody.append('confirmation', 'confirm');
+      formBody.append('problem', problem);
+      formBody.append('message', question);
+      formBody.append('Submit', 'Send');
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const submissionHtmlResponse = await submitForm(
+        this._secrets,
+        'team/clar.php',
+        formBody,
+      );
+      console.log(submissionHtmlResponse);
+
+      await this._panel.webview.postMessage({
+        command: 'clarification-submitted',
+      });
+    };
+
+    const submitRun = async (message: submitRunMessage) => {
+      const { problem, language, filePath } = message;
+      const blob = new Blob(
+        [readFileSync(filePath, { encoding: 'utf8', flag: 'r' })],
+
+        // options.type is optional (defaults to '')
+        // leave it undefined doesn't appear to break anything
+        // however, it's being defined here just in case
+        { type: mime.lookup(path.extname(filePath)) || '' },
+      );
+
+      const formBody = new FormData();
+      formBody.append('confirmation', 'confirm');
+      formBody.append('problem', problem);
+      formBody.append('language', language);
+      // may trigger warning `ExperimentalWarning: buffer.File is an experimental feature`;
+      // as you can see here https://nodejs.org/api/buffer.html#class-file,
+      // API is no longer experimental as of v20
+      // (to check which Node version VS Code is running on, go to Help > About)
+      formBody.append('sourcefile', blob, path.basename(filePath));
+      formBody.append('Submit', 'Send');
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const submissionHtmlResponse = await submitForm(
+        this._secrets,
+        'team/run.php',
+        formBody,
+      );
+      console.log(submissionHtmlResponse);
+
+      await this._panel.webview.postMessage({
+        command: 'run-submitted',
+      });
+    };
+
+    const download = async (message: downloadMessage) => {
+      const pathToSave =
+        vscode.workspace.workspaceFolders === undefined
+          ? // if VS Code doesn't have a opened directory, save file in cwd
+            // (i.e. the directory from which VS Code was opened from)
+            message.name
+          : path.join(
+              vscode.workspace.workspaceFolders[0].uri.fsPath,
+              message.name,
+            );
+
+      await downloadBase(message.url, pathToSave, this._secrets);
+    };
+
+    const pickFile = async () => {
+      const files = await vscode.window.showOpenDialog({
+        openLabel: 'Select file',
+        title: 'File dialog',
+        canSelectMany: false,
+        filters: {
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          'Source code': [
+            'c',
+            'cc',
+            'cpp',
+            'cxx',
+            'java',
+            'py',
+            'py2',
+            'py3',
+            'kt',
+            'kts',
+            'js',
+            'cjs',
+            'mjs',
+          ],
+        },
+      });
+
+      await this._panel.webview.postMessage({
+        command: 'file-picked',
+        path: files?.[0].fsPath,
+      });
+    };
   }
-}
-
-/**
- * post `update-data` event to the Dashboard webview
- * if there're credentials stored, fetch and send all data to the webview
- */
-async function updateData(
-  secrets: vscode.SecretStorage,
-  panel: vscode.WebviewPanel,
-) {
-  if (await credentialsExpired(secrets)) {
-    await logOut(secrets);
-
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    vscode.window.showErrorMessage(
-      'Credentials expired. Please, log in again.',
-    );
-  }
-
-  const credentials = await getCredentials(secrets, false);
-
-  if (credentials === null) {
-    await panel.webview.postMessage({
-      command: 'update-data',
-      credentials,
-    });
-    return;
-  }
-
-  const problems = await getProblems(secrets);
-  const clarifications = await getClarifications(secrets);
-  const score = await getScore(secrets);
-  const { runs, allowedProgrammingLanguages, problemsIds } =
-    await getRunsData(secrets);
-
-  await panel.webview.postMessage({
-    command: 'update-data',
-    credentials,
-    problems,
-    runs,
-    clarifications,
-    score,
-    allowedProgrammingLanguages,
-    problemsIds,
-  });
-}
-
-async function credentialsExpired(secrets: vscode.SecretStorage) {
-  const credentials = await getCredentials(secrets, false);
-  return credentials !== null && credentials.expireAt <= Date.now();
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function inspectSecretStorage(secrets: vscode.SecretStorage) {
-  console.log({
-    credentials: await secrets.get('credentials'),
-    cookieJar: await secrets.get('cookieJar'),
-  });
 }
 
 export default BocaTeamDashboard;
