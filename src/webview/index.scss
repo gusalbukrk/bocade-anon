@@ -5,10 +5,24 @@
   --spacing-between-form-element-and-label: calc(var(--spacing-between-form-elements) / 2);
 }
 
+body {
+  padding: 1rem 20px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  padding: 0;
+}
+
 header {
+  &:has(+ main #problems) {
+    margin-bottom: var(--spacing-around-sections);
+  }
+
   > div:first-child {
     display: flex;
     align-items: center;
+    margin-bottom: var(--spacing-between-section-elements);
 
     h1 {
       margin-right: .5rem;
@@ -34,38 +48,58 @@ header {
   }
 }
 
-main {
-  // wait for BOCA data to be loaded to apply the following styles to footer
-  &:has(#problems) + footer {
-    margin-top: var(--spacing-around-sections);
-    text-align: center;
-  }
-
-  section {
-    margin-top: var(--spacing-around-sections);
-
-    > :first-child {
-      // element margins will be defined by its parent section's and subsequent sibling's margin-top
-      margin: 0;
-    }
-
-    > *:not(:first-child) {
-      margin-top: var(--spacing-between-section-elements);
-    }
-
-      vscode-data-grid-row[row-type="header"] {
-        text-transform: capitalize;
-      }
+footer {
+  p {
+    margin: 0;
   }
 }
 
+main {
+  &:has(#problems) + footer {
+    text-align: center;
+  }
 
-#runs, #clarifications {
+  vscode-progress-ring {
+    margin-bottom: var(--spacing-between-section-elements);;
+  }
+
+  #login {
+    margin-top: .666rem;
+    margin-bottom: 1.5rem;
+  }
+
+  section {
+    margin-bottom: var(--spacing-around-sections);
+
+    > *:not(:last-child) {
+      margin-bottom: var(--spacing-between-section-elements);
+    }
+
+    vscode-data-grid-row[row-type="header"] {
+      text-transform: capitalize;
+    }
+  }
+}
+
+#login, #runs, #clarifications {
+  h3 {
+    margin-bottom: var(--spacing-between-form-elements);;
+  }
+
   form {
     display: flex;
     flex-direction: column;
     row-gap: var(--spacing-between-form-elements);
     max-width: 300px;
+
+    &.disabled label {
+      cursor: not-allowed;
+      opacity: var(--disabled-opacity);
+    }
+
+    :is(vscode-text-field, vscode-text-area)::part(label) {
+      margin-bottom: var(--spacing-between-form-element-and-label);
+    }
 
     div {
       display: flex;
@@ -78,6 +112,21 @@ main {
 
     > vscode-button:last-child {
       align-self: flex-start;
+    }
+  }
+
+  .submit-warning {
+    margin-top: 1rem;
+    display: flex;
+    column-gap: .5rem;
+    align-items: center;
+
+    .codicon-pass {
+      color: #198754;
+    }
+
+    .codicon-error {
+      color: #DC3545;
     }
   }
 }
@@ -105,8 +154,4 @@ main {
       overflow-wrap: break-word;
     }
   }
-}
-
-vscode-text-area::part(label) {
-  margin-bottom: var(--spacing-between-form-element-and-label);
 }

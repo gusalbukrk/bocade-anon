@@ -1,4 +1,4 @@
-import React, { Component, Dispatch, SetStateAction, useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   VSCodeDataGrid,
   VSCodeDataGridRow,
@@ -10,6 +10,7 @@ import {
 } from '@vscode/webview-ui-toolkit/react';
 
 import { clarifications, problemsIds } from '../../utils/getData.js';
+import useWarning from '../hooks/useWarning.js';
 
 function ClarificationsSection({
   clarifications,
@@ -20,48 +21,41 @@ function ClarificationsSection({
   clarifications: clarifications;
   problemsIds: problemsIds;
   vscode: ReturnType<typeof acquireVsCodeApi>;
-  setIsReloading: Dispatch<SetStateAction<boolean>>;
+  setIsReloading: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const [warning, setWarning] = React.useState('');
-  const timeoutIdRef = React.useRef<NodeJS.Timeout>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { Warning, setWarning } = useWarning();
 
   // using refs instead of state in forms fields (i.e. controlled components) because
   // it's a simpler approach (https://stackoverflow.com/a/34622774)
   //
   // refs typing doesn't includes all available properties out-of-the-box
   // https://github.com/microsoft/fast/issues/6909
-  const problemsDropdownRef = React.useRef<
-    Component<typeof VSCodeDropdown> & HTMLElement
+  const problemsDropdownRef = useRef<
+    React.Component<typeof VSCodeDropdown> & HTMLElement
   >(null);
-  const questionTextAreaRef = React.useRef<
-    Component<typeof VSCodeDropdown> & HTMLElement
+  const questionTextAreaRef = useRef<
+    React.Component<typeof VSCodeDropdown> & HTMLElement
   >(null);
 
   useEffect(() => {
     window.addEventListener('message', (e) => {
       const message = e.data as { command: string };
       if (message.command === 'clarification-submitted') {
-        setWarning('Clarification submitted successfully.');
-
-        setIsReloading(true);
+        setWarning('Clarification submitted successfully.', false);
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         problemsDropdownRef.current!.setAttribute('current-value', '0');
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         questionTextAreaRef.current!.setAttribute('current-value', '');
-        timeoutIdRef.current = setTimeout(() => {
-          setWarning('');
-        }, 10000);
+
+        setIsSubmitting(false);
+        setIsReloading(true);
       }
     });
   }, []);
 
   function handleSubmit() {
-    if (timeoutIdRef.current !== undefined) {
-      clearTimeout(timeoutIdRef.current);
-    }
-    setWarning('');
-
     /* eslint-disable @typescript-eslint/no-non-null-assertion */
     const problem = problemsDropdownRef.current!.getAttribute('current-value')!;
     const question = questionTextAreaRef
@@ -70,13 +64,11 @@ function ClarificationsSection({
     /* eslint-enable @typescript-eslint/no-non-null-assertion */
 
     if (question === '') {
-      setWarning('Question field cannot be empty.');
-      timeoutIdRef.current = setTimeout(() => {
-        setWarning('');
-      }, 10000);
-
+      setWarning('Question field cannot be empty.', true);
       return;
     }
+
+    setIsSubmitting(true);
 
     vscode.postMessage({
       command: 'submit-clarification',
@@ -136,12 +128,13 @@ function ClarificationsSection({
       <aside className="form-container">
         <h3>Submit new clarification</h3>
 
-        <form>
+        <form className={isSubmitting ? 'disabled' : ''}>
           <div>
             <label htmlFor="clarificationsProblemsDropdown">Problem</label>
             <VSCodeDropdown
               id="clarificationsProblemsDropdown"
               ref={problemsDropdownRef}
+              disabled={isSubmitting}
             >
               <VSCodeOption value="0">General</VSCodeOption>
               {problemsIds.map((problem) => (
@@ -150,7 +143,11 @@ function ClarificationsSection({
             </VSCodeDropdown>
           </div>
 
-          <VSCodeTextArea ref={questionTextAreaRef} rows={5}>
+          <VSCodeTextArea
+            ref={questionTextAreaRef}
+            rows={5}
+            disabled={isSubmitting}
+          >
             Question
           </VSCodeTextArea>
 
@@ -159,10 +156,12 @@ function ClarificationsSection({
         2 problems — `enter` key press while editing textarea was triggering submit
         and `enter` key press while focusing on submit button was triggering submit twice — ergo,
         `handleSubmit()` was moved to VSCodeButton's `onClick` */}
-          <VSCodeButton onClick={handleSubmit}>Submit</VSCodeButton>
+          <VSCodeButton onClick={handleSubmit} disabled={isSubmitting}>
+            Submit
+          </VSCodeButton>
         </form>
 
-        <p>{warning}</p>
+        <Warning />
       </aside>
     </section>
   );

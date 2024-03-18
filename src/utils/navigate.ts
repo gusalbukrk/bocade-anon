@@ -177,6 +177,8 @@ async function download(
 async function logIn(
   credentials: credentials,
   secrets: vscode.SecretStorage,
+  // not using an Error, because it's not a JSON serializable object
+  // which is a requirement for `vscode.postMessage`
 ): Promise<errorObject | null> {
   console.log(
     `checking if credentials are valid: ${JSON.stringify(credentials)}`,
@@ -190,7 +192,7 @@ async function logIn(
     credentials === null ||
     Object.values(credentials).some((c) => c === '')
   ) {
-    return { message: 'credentials are in an invalid format' };
+    return { message: 'All fields are required.' };
   }
 
   let html;
@@ -202,7 +204,7 @@ async function logIn(
       })
     ).text();
   } catch (e) {
-    return { message: 'IP is unreachable' };
+    return { message: 'IP is unreachable.' };
   }
 
   const dom = new JSDOM(html);
@@ -212,7 +214,7 @@ async function logIn(
     );
 
   if (!isBocaIndexPage) {
-    return { message: "IP doesn't point to a BOCA server" };
+    return { message: "IP doesn't point to a BOCA server." };
   }
 
   await secrets.store('credentials', JSON.stringify(credentials));
@@ -223,7 +225,7 @@ async function logIn(
     await getPageJsdom('team/index.php', secrets);
   } catch (e: unknown) {
     await secrets.delete('credentials');
-    return { message: 'invalid credentials' };
+    return { message: 'Invalid credentials.' };
   }
 
   console.log(

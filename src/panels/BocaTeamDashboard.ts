@@ -20,7 +20,7 @@ import {
 } from '../utils/getData';
 
 type message = { command: 'logout' | 'loaded' | 'reload' | 'pick-file' };
-type loginMessage = { command: 'login'; credentials: credentials };
+type loginMessage = { command: 'submit-login'; credentials: credentials };
 type downloadMessage = { command: 'download'; name: string; url: string };
 type submitRunMessage = {
   command: 'submit-run';
@@ -54,6 +54,10 @@ class BocaTeamDashboard {
       null,
       this._disposables,
     );
+    this._panel.iconPath = {
+      light: vscode.Uri.joinPath(extensionUri, 'media', 'code-black.svg'),
+      dark: vscode.Uri.joinPath(extensionUri, 'media', 'code-white.svg'),
+    };
     this._panel.webview.html = this._getWebviewContent(
       this._panel.webview,
       extensionUri,
@@ -83,6 +87,7 @@ class BocaTeamDashboard {
               'dist',
             ),
           ],
+          enableFindWidget: true,
           retainContextWhenHidden: true,
         },
       );
@@ -160,7 +165,7 @@ class BocaTeamDashboard {
       ) => {
         const { command } = message;
 
-        if (command === 'login') {
+        if (command === 'submit-login') {
           await logIn(message);
         } else if (command === 'logout') {
           await logOut(this._secrets);
@@ -173,6 +178,9 @@ class BocaTeamDashboard {
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
             vscode.window.showErrorMessage(
               'Credentials expired. Please, log in again.',
+              {
+                modal: true,
+              },
             );
           }
         }
@@ -188,11 +196,7 @@ class BocaTeamDashboard {
           return;
         }
 
-        if (
-          command === 'login' ||
-          command === 'loaded' ||
-          command === 'reload'
-        ) {
+        if (command === 'loaded' || command === 'reload') {
           await updateData();
         } else if (command === 'submit-clarification') {
           await submitClarification(message);
@@ -249,21 +253,15 @@ class BocaTeamDashboard {
     };
 
     const logIn = async (message: loginMessage) => {
-      const errorObject = await logInBase(message.credentials, this._secrets);
+      const error = await logInBase(message.credentials, this._secrets);
 
-      if (errorObject === null) {
+      if (error === null) {
         await updateData();
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        vscode.window.showInformationMessage('Logged in successfully!');
-      } else {
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        vscode.window.showErrorMessage(
-          `Login failed. Reason: ${errorObject.message}. Please try again.`,
-        );
       }
 
       await this._panel.webview.postMessage({
-        command: 'login-finished',
+        command: 'login-submitted',
+        error,
       });
     };
 

@@ -1,4 +1,4 @@
-import React, { Component, Dispatch, SetStateAction, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   VSCodeDataGrid,
   VSCodeDataGridRow,
@@ -13,6 +13,7 @@ import {
   problemsIds,
   runs,
 } from '../../utils/getData.js';
+import useWarning from '../hooks/useWarning.js';
 
 function RunsSection({
   runs,
@@ -29,22 +30,22 @@ function RunsSection({
     e: React.MouseEvent<HTMLAnchorElement> & { target: HTMLAnchorElement },
   ) => void;
   vscode: ReturnType<typeof acquireVsCodeApi>;
-  setIsReloading: Dispatch<SetStateAction<boolean>>;
+  setIsReloading: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const [selectedFilePath, setSelectedFilePath] = React.useState<string>();
-  const [warning, setWarning] = React.useState('');
-  const timeoutIdRef = React.useRef<NodeJS.Timeout>();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedFilePath, setSelectedFilePath] = useState<string>();
+  const { Warning, setWarning } = useWarning();
 
   // using refs instead of state in forms fields (i.e. controlled components) because
   // it's a simpler approach (https://stackoverflow.com/a/34622774)
   //
   // refs typing doesn't includes all available properties out-of-the-box
   // https://github.com/microsoft/fast/issues/6909
-  const problemsDropdownRef = React.useRef<
-    Component<typeof VSCodeDropdown> & HTMLElement
+  const problemsDropdownRef = useRef<
+    React.Component<typeof VSCodeDropdown> & HTMLElement
   >(null);
-  const languagesDropdownRef = React.useRef<
-    Component<typeof VSCodeDropdown> & HTMLElement
+  const languagesDropdownRef = useRef<
+    React.Component<typeof VSCodeDropdown> & HTMLElement
   >(null);
 
   useEffect(() => {
@@ -55,18 +56,16 @@ function RunsSection({
           (message as typeof message & { path: string }).path,
         );
       } else if (message.command === 'run-submitted') {
-        setWarning('Run submitted successfully.');
-
-        setIsReloading(true);
+        setWarning('Run submitted successfully.', false);
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         problemsDropdownRef.current!.setAttribute('current-value', '-1');
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         languagesDropdownRef.current!.setAttribute('current-value', '-1');
         setSelectedFilePath(undefined);
-        timeoutIdRef.current = setTimeout(() => {
-          setWarning('');
-        }, 10000);
+
+        setIsSubmitting(false);
+        setIsReloading(true);
       }
     });
   }, []);
@@ -78,11 +77,6 @@ function RunsSection({
   }
 
   function handleSubmit() {
-    if (timeoutIdRef.current !== undefined) {
-      clearTimeout(timeoutIdRef.current);
-    }
-    setWarning('');
-
     /* eslint-disable @typescript-eslint/no-non-null-assertion */
     const problem = problemsDropdownRef.current!.getAttribute('current-value')!;
     const language =
@@ -91,12 +85,11 @@ function RunsSection({
     /* eslint-enable @typescript-eslint/no-non-null-assertion */
 
     if (problem === '-1' || language === '-1' || filePath === undefined) {
-      setWarning('All fields are required.');
-      timeoutIdRef.current = setTimeout(() => {
-        setWarning('');
-      }, 10000);
+      setWarning('All fields are required.', true);
       return;
     }
+
+    setIsSubmitting(true);
 
     vscode.postMessage({
       command: 'submit-run',
@@ -160,10 +153,14 @@ function RunsSection({
       <aside className="form-container">
         <h3>Submit new run</h3>
 
-        <form>
+        <form className={isSubmitting ? 'disabled' : ''}>
           <div>
             <label htmlFor="problemsDropdown">Problem</label>
-            <VSCodeDropdown id="problemsDropdown" ref={problemsDropdownRef}>
+            <VSCodeDropdown
+              id="problemsDropdown"
+              ref={problemsDropdownRef}
+              disabled={isSubmitting}
+            >
               <VSCodeOption value="-1">--</VSCodeOption>
               {problemsIds.map((problem) => (
                 <VSCodeOption value={problem.id}>{problem.name}</VSCodeOption>
@@ -173,7 +170,11 @@ function RunsSection({
 
           <div>
             <label htmlFor="languagesDropdown">Language</label>
-            <VSCodeDropdown id="languagesDropdown" ref={languagesDropdownRef}>
+            <VSCodeDropdown
+              id="languagesDropdown"
+              ref={languagesDropdownRef}
+              disabled={isSubmitting}
+            >
               <VSCodeOption value="-1">--</VSCodeOption>
               {allowedProgrammingLanguages.map((language) => (
                 <VSCodeOption value={language.id}>{language.name}</VSCodeOption>
@@ -185,6 +186,7 @@ function RunsSection({
             <VSCodeButton
               onClick={handleFileUploadButtonClick}
               appearance="secondary"
+              disabled={isSubmitting}
             >
               Choose file
               <span className="codicon codicon-add"></span>
@@ -198,10 +200,12 @@ function RunsSection({
         2 problems — `enter` key press while focusing on upload file button was triggering submit
         and `enter` key press while focusing on submit button was triggering submit twice — ergo,
         `handleSubmit()` was moved to VSCodeButton's `onClick` */}
-          <VSCodeButton onClick={handleSubmit}>Submit</VSCodeButton>
+          <VSCodeButton onClick={handleSubmit} disabled={isSubmitting}>
+            Submit
+          </VSCodeButton>
         </form>
 
-        <p>{warning}</p>
+        <Warning />
       </aside>
     </section>
   );
