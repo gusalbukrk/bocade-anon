@@ -79,7 +79,6 @@ function ClarificationsSection({
 
   return (
     <section id="clarifications">
-      <h2>Clarifications</h2>
       {clarifications.length === 0 ? (
         <p>No clarifications available.</p>
       ) : (

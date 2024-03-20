@@ -140,7 +140,7 @@ class BocaTeamDashboard {
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource}; img-src ${webview.cspSource} https: http:; script-src 'nonce-${nonce}';">
+          <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource} data:; img-src ${webview.cspSource} https: http:; script-src 'nonce-${nonce}';">
           <link href="${stylesheetUriStr}" rel="stylesheet" />
           <link href="${codiconsUriStr}" rel="stylesheet" />
           <title>BOCA Team Dashboard</title>
@@ -220,12 +220,17 @@ class BocaTeamDashboard {
       const problems = await getProblems(this._secrets);
       const clarifications = await getClarifications(this._secrets);
       const score = await getScore(this._secrets);
-      const { runs, allowedProgrammingLanguages, problemsIds } =
-        await getRunsData(this._secrets);
+      const {
+        contestRemainingTime,
+        runs,
+        allowedProgrammingLanguages,
+        problemsIds,
+      } = await getRunsData(this._secrets);
 
       await this._panel.webview.postMessage({
         command: 'update-data',
         credentials,
+        contestRemainingTime,
         problems,
         runs,
         clarifications,

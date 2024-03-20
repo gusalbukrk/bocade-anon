@@ -104,6 +104,16 @@ function getRuns(runsPageJsdom: jsdom.JSDOM, ip: string) {
   return runs;
 }
 
+function getContestRemainingTime(pageJsdom: jsdom.JSDOM) {
+  // https://github.com/cassiopc/boca/blob/d712c818ac131caf357363ffc52517d6f56fe754/src/fcontest.php#L1375
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const timeLeft = pageJsdom.window.document
+    .querySelector('table:first-of-type tr td:nth-of-type(3)')!
+    .textContent!.trim();
+
+  return timeLeft;
+}
+
 function getAllowedProgrammingLanguages(runsPageJsdom: jsdom.JSDOM) {
   const runsFormLanguageOptions = [
     ...runsPageJsdom.window.document.querySelectorAll<HTMLOptionElement>(
@@ -144,12 +154,13 @@ function getProblemsIds(runsPageJsdom: jsdom.JSDOM) {
 }
 
 /**
- * get all relevant data from `team/run.php` page (runs, allowed programming languages, problems ids)
+ * get all relevant data from `team/run.php` page
  */
 async function getRunsData(secrets: vscode.SecretStorage) {
   const runsPageJsdom = await getPageJsdom('team/run.php', secrets);
 
   return {
+    contestRemainingTime: getContestRemainingTime(runsPageJsdom),
     runs: getRuns(runsPageJsdom, (await getCredentials(secrets)).ip),
     allowedProgrammingLanguages: getAllowedProgrammingLanguages(runsPageJsdom),
     problemsIds: getProblemsIds(runsPageJsdom),

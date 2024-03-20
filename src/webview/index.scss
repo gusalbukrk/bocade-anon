@@ -7,11 +7,58 @@
 
 body {
   padding: 1rem 20px;
+  min-height: 100vh;
+  box-sizing: border-box;
+  position: relative;
 }
 
 h1, h2, h3, h4, h5, h6 {
   margin: 0;
   padding: 0;
+}
+
+h1 {
+  font-size: 1.75em; // default is 2em
+}
+
+h2 {
+  font-size: 1.05em; // default is 1.5em
+  text-transform: uppercase;
+}
+
+h3 {
+  font-size: 1.15em; // default is 1.17em
+}
+
+@font-face {
+	font-family: fa;
+	font-display: block;
+	src: url("../../media/fa.woff") format("woff");
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.fa-hourglass {
+  font-family: fa;
+  display: inline-block;
+	text-decoration: none;
+	text-rendering: auto;
+	text-align: center;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+
+  animation: spin 6s steps(4) infinite;
+}
+
+.fa-hourglass::before {
+  content: "\e900";
 }
 
 header {
@@ -43,24 +90,39 @@ header {
     }
   }
 
-  h3 span {
-    text-decoration: underline;
-  }
-}
-
-footer {
-  p {
-    margin: 0;
+  p:nth-of-type(2) span:first-child {
+    margin-right: .5rem;
   }
 }
 
 main {
   &:has(#problems) + footer {
     text-align: center;
+    width: calc(100% - 40px);
+    position: absolute;
+    bottom: 16px;
   }
 
   vscode-progress-ring {
     margin-bottom: var(--spacing-between-section-elements);;
+  }
+
+  vscode-panels {
+    &::part(activeIndicator) {
+      height: 2px;
+    }
+
+    vscode-panel-tab {
+      padding-bottom: 12px;
+    }
+
+    vscode-panel-view {
+      margin-top: 1.5rem;
+
+      > * {
+        flex-basis: 100%;
+      }
+    }
   }
 
   #login {
@@ -81,6 +143,12 @@ main {
   }
 }
 
+footer {
+  p {
+    margin: 0;
+  }
+}
+
 #login, #runs, #clarifications {
   h3 {
     margin-bottom: var(--spacing-between-form-elements);;
@@ -94,7 +162,11 @@ main {
 
     &.disabled label {
       cursor: not-allowed;
-      opacity: var(--disabled-opacity);
+
+      // same as --disabled-opacity which is a variable defined at VS Code default stylesheet
+      // which is applied to native labels of VSCodeTextField, VSCodeTextArea
+      // using here in non-native labels (which are used for VSCodeDropdown) for consistency
+      opacity: .4;
     }
 
     :is(vscode-text-field, vscode-text-area)::part(label) {

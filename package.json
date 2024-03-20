@@ -17,7 +17,16 @@
         "command": "boca-team-dashboard.open",
         "title": "Open BOCA Team Dashboard"
       }
-    ]
+    ],
+    "icons": {
+      "fa-hourglass": {
+        "description": "FontAwesome's hourglass icon",
+        "default": {
+          "fontPath": "media/fa.woff",
+          "fontCharacter": "\\e900"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

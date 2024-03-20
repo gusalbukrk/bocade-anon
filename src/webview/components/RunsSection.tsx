@@ -101,7 +101,6 @@ function RunsSection({
 
   return (
     <section id="runs">
-      <h2>Runs</h2>
       {runs.length === 0 ? (
         <p>No runs available.</p>
       ) : (

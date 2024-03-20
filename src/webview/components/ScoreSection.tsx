@@ -16,7 +16,6 @@ function ScoreSection({
 }) {
   return (
     <section id="score">
-      <h2>Score</h2>
       <VSCodeDataGrid>
         <VSCodeDataGridRow rowType="header">
           {['#', 'user/site', 'name', ...problemsNames, 'total'].map(

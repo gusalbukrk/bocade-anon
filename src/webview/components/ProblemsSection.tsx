@@ -18,7 +18,6 @@ function ProblemsSection({
 }) {
   return (
     <section id="problems">
-      <h2>Problems</h2>
       {problems.length === 0 ? (
         <p>No problems available yet.</p>
       ) : (

@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import {
   VSCodeButton,
   VSCodeLink,
+  VSCodePanelTab,
+  VSCodePanelView,
+  VSCodePanels,
   VSCodeProgressRing,
 } from '@vscode/webview-ui-toolkit/react';
 
@@ -23,6 +26,7 @@ import ScoreSection from './ScoreSection.js';
 type updateDataMessage = {
   command: 'update-data';
   credentials: credentials;
+  contestRemainingTime?: string;
   problems?: problems;
   runs?: runs;
   clarifications?: clarifications;
@@ -47,6 +51,7 @@ const Dashboard = ({
   vscode: ReturnType<typeof acquireVsCodeApi>;
 }) => {
   const [credentials, setCredentials] = useState<credentials>();
+  const [contestRemainingTime, setContestRemainingTime] = useState<string>();
   const [problems, setProblems] = useState<problems>();
   const [runs, setRuns] = useState<runs>();
   const [clarifications, setClarifications] = useState<clarifications>();
@@ -105,6 +110,7 @@ const Dashboard = ({
       setCredentials(message.credentials);
 
       // following properties are optional, so they may be undefined
+      setContestRemainingTime(message.contestRemainingTime);
       setProblems(message.problems);
       setRuns(message.runs);
       setClarifications(message.clarifications);
@@ -178,9 +184,21 @@ const Dashboard = ({
         </div>
         {credentials?.username !== undefined && (
           <>
-            <h3>
-              Logged in as <span>{credentials.username}</span>!
-            </h3>
+            <p>
+              Logged in as <strong>{credentials.username}</strong>
+            </p>
+            <p>
+              <span
+                dangerouslySetInnerHTML={{
+                  // eslint-disable-next-line @typescript-eslint/naming-convention, @typescript-eslint/no-non-null-assertion
+                  __html: contestRemainingTime!.replace(
+                    /(.*) (to start|left|of extra time)/,
+                    '<strong>$1</strong> $2',
+                  ),
+                }}
+              ></span>
+              <span className="fa-hourglass"></span>
+            </p>
             <p>
               <VSCodeLink href={`http://${credentials.ip}/boca`}>
                 Go to BOCA web dashboard
@@ -203,33 +221,51 @@ const Dashboard = ({
         ) : credentials === null ? (
           <LoginForm vscode={vscode} />
         ) : (
-          <>
-            <ProblemsSection
-              problems={problems ?? []}
-              handleDownloadLinkClick={handleDownloadLinkClick}
-            />
+          <VSCodePanels>
+            <VSCodePanelTab id="tab-1">
+              <h2>Problems</h2>
+            </VSCodePanelTab>
+            <VSCodePanelTab id="tab-2">
+              <h2>Runs</h2>
+            </VSCodePanelTab>
+            <VSCodePanelTab id="tab-3">
+              <h2>Clarifications</h2>
+            </VSCodePanelTab>
+            <VSCodePanelTab id="tab-4">
+              <h2>Score</h2>
+            </VSCodePanelTab>
 
-            <RunsSection
-              runs={runs ?? []}
-              problemsIds={problemsIds ?? []}
-              allowedProgrammingLanguages={allowedProgrammingLanguages ?? []}
-              handleDownloadLinkClick={handleDownloadLinkClick}
-              vscode={vscode}
-              setIsReloading={setIsReloading}
-            />
-
-            <ClarificationsSection
-              clarifications={clarifications ?? []}
-              problemsIds={problemsIds ?? []}
-              vscode={vscode}
-              setIsReloading={setIsReloading}
-            />
-
-            <ScoreSection
-              problemsNames={(problems ?? []).map((p) => p.name)}
-              score={score ?? []}
-            />
-          </>
+            <VSCodePanelView id="view-1">
+              <ProblemsSection
+                problems={problems ?? []}
+                handleDownloadLinkClick={handleDownloadLinkClick}
+              />
+            </VSCodePanelView>
+            <VSCodePanelView id="view-2">
+              <RunsSection
+                runs={runs ?? []}
+                problemsIds={problemsIds ?? []}
+                allowedProgrammingLanguages={allowedProgrammingLanguages ?? []}
+                handleDownloadLinkClick={handleDownloadLinkClick}
+                vscode={vscode}
+                setIsReloading={setIsReloading}
+              />
+            </VSCodePanelView>
+            <VSCodePanelView id="view-3">
+              <ClarificationsSection
+                clarifications={clarifications ?? []}
+                problemsIds={problemsIds ?? []}
+                vscode={vscode}
+                setIsReloading={setIsReloading}
+              />
+            </VSCodePanelView>
+            <VSCodePanelView id="view-4">
+              <ScoreSection
+                problemsNames={(problems ?? []).map((p) => p.name)}
+                score={score ?? []}
+              />
+            </VSCodePanelView>
+          </VSCodePanels>
         )}
       </main>
       <footer>
