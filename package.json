@@ -41,6 +41,9 @@
     "lint:webview:watch": "onchange -i 'src/webview/**/*.{ts,tsx}' -- npm run lint:webview",
     "prepare": "husky"
   },
+  "extensionDependencies": [
+    "tomoki1207.pdf"
+  ],
   "devDependencies": {
     "@commitlint/cli": "^19.0.3",
     "@commitlint/config-conventional": "^19.0.3",
