@@ -90,7 +90,7 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.StatusBarAlignment.Right,
     -100, // lower means more to the right
   );
-  statusBarItem.text = '$(split-horizontal)  Organize';
+  statusBarItem.text = '$(split-horizontal)   Organize';
   statusBarItem.name = 'BOCA Team Dashboard – Organize tabs';
   statusBarItem.command = 'boca-team-dashboard.organize';
   statusBarItem.tooltip = 'BOCA Team Dashboard – Organize tabs';

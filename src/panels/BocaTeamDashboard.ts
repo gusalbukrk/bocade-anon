@@ -21,7 +21,7 @@ import {
 
 type message = { command: 'logout' | 'loaded' | 'reload' | 'pick-file' };
 type loginMessage = { command: 'submit-login'; credentials: credentials };
-type downloadMessage = { command: 'download'; name: string; url: string };
+type downloadMessage = { command: 'download'; filename: string; url: string };
 type submitRunMessage = {
   command: 'submit-run';
   problem: string;
@@ -335,13 +335,33 @@ class BocaTeamDashboard {
         vscode.workspace.workspaceFolders === undefined
           ? // if VS Code doesn't have a opened directory, save file in cwd
             // (i.e. the directory from which VS Code was opened from)
-            message.name
+            message.filename
           : path.join(
               vscode.workspace.workspaceFolders[0].uri.fsPath,
-              message.name,
+              message.filename,
             );
 
       await downloadBase(message.url, pathToSave, this._secrets);
+
+      // wait a while to open file, because error if tried to open while downloading;
+      // for PDFs, error message appears in view and it's not automatically dismissed even after
+      // download finished and document opened successfully; for other files, they don't even open
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+      setTimeout(async () => {
+        if (/\.pdf$/.test(message.filename)) {
+          // https://github.com/microsoft/vscode/issues/98473#issuecomment-634306217
+          // https://github.com/tomoki1207/vscode-pdfviewer/blob/d5f1ea28d1826dad60a3f4b6f025109caea9b4c2/src/pdfProvider.ts#L5
+          await vscode.commands.executeCommand(
+            'vscode.openWith',
+            vscode.Uri.file(pathToSave),
+            'pdf.preview',
+          );
+        } else {
+          await vscode.window.showTextDocument(vscode.Uri.file(pathToSave), {
+            preview: false,
+          });
+        }
+      }, 1000);
     };
 
     const pickFile = async () => {

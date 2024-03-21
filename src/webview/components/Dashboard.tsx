@@ -150,7 +150,7 @@ const Dashboard = ({
 
     vscode.postMessage({
       command: 'download',
-      name: e.target.textContent,
+      filename: e.target.textContent,
       url: e.target.href,
     });
   }
