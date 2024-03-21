@@ -17,7 +17,11 @@
     "commands": [
       {
         "command": "boca-team-dashboard.open",
-        "title": "Open BOCA Team Dashboard"
+        "title": "BOCA Team Dashboard – Open dashboard"
+      },
+      {
+        "command": "boca-team-dashboard.organize",
+        "title": "BOCA Team Dashboard – Organize open tabs"
       }
     ],
     "icons": {
