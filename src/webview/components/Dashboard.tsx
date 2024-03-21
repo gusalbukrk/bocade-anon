@@ -72,7 +72,7 @@ const Dashboard = ({
       id = setInterval(() => {
         setIsReloading(true);
         vscode.postMessage({ command: 'reload' });
-      }, 15000);
+      }, 60000);
     }
 
     return () => {
