@@ -48,8 +48,11 @@ class BocaTeamDashboard {
     this._panel = panel;
     this._secrets = secrets;
     this._panel.onDidDispose(
-      () => {
+      async () => {
         this.dispose();
+
+        // reopen the webview if user has closed it
+        await vscode.commands.executeCommand('boca-team-dashboard.open');
       },
       null,
       this._disposables,

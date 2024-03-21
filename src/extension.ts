@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import BocaTeamDashboard from './panels/BocaTeamDashboard';
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   const command = vscode.commands.registerCommand(
     'boca-team-dashboard.open',
     () => {
@@ -10,6 +10,8 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(command);
+
+  await vscode.commands.executeCommand('boca-team-dashboard.open');
 }
 
 export function deactivate() {}
