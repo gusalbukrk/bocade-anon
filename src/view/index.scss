@@ -1,0 +1,179 @@
+@font-face {
+	font-family: "codicon";
+	font-display: block;
+	src: url("../../node_modules/@vscode/codicons/dist/codicon.ttf?79130123c9d3674a686cf03962523e8a") format("truetype");
+}
+
+h1 {
+  text-transform: uppercase;
+}
+
+main {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+
+  article {
+    border-left: 3px solid var(--input-background);
+    padding-left: .5rem;
+    margin-bottom: 1.25rem;
+
+    &:last-of-type {
+      margin-bottom: 1.5rem;
+    }
+
+    &.pass {
+      border-left: 3px solid #198754;
+    }
+
+    &.fail {
+      border-left: 3px solid #DC3545;
+    }
+
+    details {
+      &[open] summary::marker {
+        content: "\eab4";
+      }
+
+      summary {
+        &::marker {
+          content: "\eab6";
+
+          // copied from codicon.css
+          font: normal normal normal 16px/1 codicon;
+          display: inline-block;
+          text-decoration: none;
+          text-rendering: auto;
+          text-align: center;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          user-select: none;
+          -webkit-user-select: none;
+          -ms-user-select: none;
+        }
+
+        div {
+          width: calc(100% - 16px - .5rem); // 100% minus icon width minus margin-left
+          display: inline-flex;
+          vertical-align: top;
+          justify-content: space-between;
+          margin-left: .5rem;
+
+          h4 {
+            margin: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            text-transform: uppercase;
+            font-size: 12px;
+
+            .codicon {
+              margin-left: .5rem;
+              font-weight: bold !important;
+            }
+
+            .codicon-check {
+              color: #198754;
+            }
+
+            .codicon-close {
+              color: #DC3545;
+            }
+          }
+
+          vscode-button { // delete button
+            &::part(control) {
+              padding: 2px;
+            }
+          }
+        }
+      }
+
+      > div {
+        margin-bottom: 1rem;
+
+        &:first-of-type {
+          margin-top: 1rem;
+        }
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        vscode-text-area {
+          width: 100%;
+
+          &::part(control) { // textarea element itself
+            font-size: 11.75px;
+            font-family: monospace;
+            text-wrap: nowrap;
+            overflow-x: auto;
+          }
+
+          &::part(label) {
+            margin-bottom: .35rem;
+            font-size: 12px;
+            font-weight: bold;
+            opacity: 0.8;
+          }
+        }
+
+        p {
+          margin: 0;
+          margin-bottom: .35rem;
+          color: var(--foreground);
+          font-size: var(--type-ramp-base-font-size);
+          line-height: var(--type-ramp-base-line-height);
+          font-size: 12px;
+          font-weight: bold;
+          opacity: 0.8;
+        }
+
+        div {
+          font-family: monospace;
+          border-radius: calc(var(--corner-radius-round) * 1px);
+          border: calc(var(--border-width) * 1px) solid var(--dropdown-border);
+          background: var(--input-background);
+          padding: calc(var(--design-unit) * 2px + 1px);
+          white-space: pre-wrap;
+          font-size: 11.75px;
+          text-wrap: nowrap;
+          overflow-x: auto;
+        }
+      }
+    }
+  }
+
+  section#buttons {
+    > div {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      margin-bottom: 1rem;
+
+      &:last-of-type {
+        margin-bottom: 1.5rem;
+      }
+    }
+
+    vscode-button {
+      &::part(content) {
+        text-transform: capitalize;
+      }
+
+      span:not([slot="start"]) {
+        margin-left: .5rem;
+      }
+    }
+  }
+
+  p#empty {
+    margin: 0;
+    margin-bottom: 1.5rem;
+    font-weight: bold;
+  }
+
+  p#warning {
+    font-weight: bold;
+    font-size: .85rem;
+  }
+}

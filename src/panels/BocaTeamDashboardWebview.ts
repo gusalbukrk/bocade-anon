@@ -34,8 +34,8 @@ type submitClarificationMessage = {
   question: string;
 };
 
-class BocaTeamDashboard {
-  public static currentPanel: BocaTeamDashboard | undefined;
+class BocaTeamDashboardWebview {
+  public static currentPanel: BocaTeamDashboardWebview | undefined;
   private readonly _panel: vscode.WebviewPanel;
   private readonly _secrets: vscode.SecretStorage;
   private _disposables: vscode.Disposable[] = [];
@@ -72,11 +72,11 @@ class BocaTeamDashboard {
     extensionUri: vscode.Uri,
     secrets: vscode.SecretStorage,
   ) {
-    if (BocaTeamDashboard.currentPanel) {
-      BocaTeamDashboard.currentPanel._panel.reveal();
+    if (BocaTeamDashboardWebview.currentPanel) {
+      BocaTeamDashboardWebview.currentPanel._panel.reveal();
     } else {
       const panel = vscode.window.createWebviewPanel(
-        'bocaTeamDashboard',
+        'DashboardWebview',
         'BOCA Team Dashboard',
         vscode.ViewColumn.One,
         {
@@ -95,7 +95,7 @@ class BocaTeamDashboard {
         },
       );
 
-      BocaTeamDashboard.currentPanel = new BocaTeamDashboard(
+      BocaTeamDashboardWebview.currentPanel = new BocaTeamDashboardWebview(
         panel,
         secrets,
         extensionUri,
@@ -104,7 +104,7 @@ class BocaTeamDashboard {
   }
 
   public dispose() {
-    BocaTeamDashboard.currentPanel = undefined;
+    BocaTeamDashboardWebview.currentPanel = undefined;
 
     this._panel.dispose();
 
@@ -126,7 +126,7 @@ class BocaTeamDashboard {
     ]).toString();
     const stylesheetUriStr = getUri(webview, extensionUri, [
       'out',
-      'index.css',
+      'webview.css',
     ]).toString();
     const codiconsUriStr = getUri(webview, extensionUri, [
       'node_modules',
@@ -397,4 +397,4 @@ class BocaTeamDashboard {
   }
 }
 
-export default BocaTeamDashboard;
+export default BocaTeamDashboardWebview;

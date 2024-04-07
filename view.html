@@ -1,0 +1,24 @@
+<!--
+  vite by default expects an index.html file in the root of the project or a HTML file(s)
+  w/ a user-defined name as defined in the vite config at the `rollupOptions.input` object
+  https://vitejs.dev/config/shared-options.html#root
+  https://vitejs.dev/guide/#index-html-and-project-root
+  this index.html must contain a script tag with the entry point of the app
+  during build, vite will copy this index.html to the dist folder
+  because project is a vscode extension (and not a web app), this index.html is not actually used
+  (html used instead is the one assigned to `webviewView.webview.html`)
+  hence, there's a piece of code in `vite.config.webview.mts` which will automatically
+  delete this index.html from the dist folder
+ -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/view/main.tsx"></script>
+  </body>
+</html>

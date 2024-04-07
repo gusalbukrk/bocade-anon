@@ -35,7 +35,7 @@ function ClarificationsSection({
     React.Component<typeof VSCodeDropdown> & HTMLElement
   >(null);
   const questionTextAreaRef = useRef<
-    React.Component<typeof VSCodeDropdown> & HTMLElement
+    React.Component<typeof VSCodeTextArea> & HTMLElement
   >(null);
 
   useEffect(() => {

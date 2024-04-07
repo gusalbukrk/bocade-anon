@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -7,11 +8,19 @@ export default defineConfig({
   build: {
     rollupOptions: {
       external: ['vscode'],
+      input: {
+        webview: resolve(__dirname, 'webview.html'),
+        view: resolve(__dirname, 'view.html'),
+      },
       output: {
-        entryFileNames: `webview.js`,
+        entryFileNames: `[name].js`,
         chunkFileNames: `[name].js`,
         assetFileNames: `[name].[ext]`,
       },
+    },
+    modulePreload: {
+      // no need for module preloading because it's not loading files from the internet
+      polyfill: false,
     },
     sourcemap: true,
     outDir: 'out',
@@ -25,10 +34,12 @@ export default defineConfig({
     {
       name: 'delete-index-html',
       writeBundle() {
-        fs.unlink('./out/index.html', (err) => {
-          if (err) {
-            throw err;
-          }
+        ['./out/webview.html', './out/view.html'].map((file) => {
+          fs.unlink(file, (err) => {
+            if (err) {
+              throw err;
+            }
+          });
         });
       },
     },

@@ -273,7 +273,7 @@ const Dashboard = ({
           <VSCodeLink href="https://github.com/gusalbukrk">
             gusalbukrk
           </VSCodeLink>{' '}
-          @ IF Goiano
+          @ IF Goiano – 2024
         </p>
       </footer>
     </>
