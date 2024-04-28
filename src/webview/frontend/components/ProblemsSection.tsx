@@ -5,7 +5,7 @@ import {
   VSCodeDataGridCell,
 } from '@vscode/webview-ui-toolkit/react';
 
-import { problems } from '../../utils/getData.js';
+import { problems } from '../../../webview/backend/getData.js';
 
 function ProblemsSection({
   problems,

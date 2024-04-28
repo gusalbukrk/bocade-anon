@@ -3,21 +3,20 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import * as vscode from 'vscode';
 
-import getCredentials, { credentials } from '../utils/getCredentials';
-import { getUri } from '../utils/getUri';
-import { getNonce } from '../utils/getNonce';
+import getCredentials, { credentials } from './getCredentials';
+import { getUri, getNonce } from '../../shared';
 import {
   logIn as logInBase,
   logOut,
   download as downloadBase,
   submitForm,
-} from '../utils/navigate';
+} from './navigate';
 import {
   getProblems,
   getClarifications,
   getScore,
   getRunsData,
-} from '../utils/getData';
+} from './getData';
 
 type message = { command: 'logout' | 'loaded' | 'reload' | 'pick-file' };
 type loginMessage = { command: 'submit-login'; credentials: credentials };

@@ -9,7 +9,10 @@ import {
   VSCodeOption,
 } from '@vscode/webview-ui-toolkit/react';
 
-import { clarifications, problemsIds } from '../../utils/getData.js';
+import {
+  clarifications,
+  problemsIds,
+} from '../../../webview/backend/getData.js';
 import useWarning from '../hooks/useWarning.js';
 
 function ClarificationsSection({

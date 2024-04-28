@@ -12,7 +12,7 @@ import {
   allowedProgrammingLanguages,
   problemsIds,
   runs,
-} from '../../utils/getData.js';
+} from '../../../webview/backend/getData.js';
 import useWarning from '../hooks/useWarning.js';
 
 function RunsSection({

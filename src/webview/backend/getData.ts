@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import jsdom from 'jsdom';
-import { getPageJsdom } from '../utils/navigate';
+import { getPageJsdom } from './navigate';
 import getCredentials from './getCredentials';
 
 async function getProblems(secrets: vscode.SecretStorage) {

@@ -8,7 +8,7 @@ import {
   VSCodeProgressRing,
 } from '@vscode/webview-ui-toolkit/react';
 
-import { credentials } from '../../utils/getCredentials.js';
+import { credentials } from '../../../webview/backend/getCredentials.js';
 import {
   problems,
   runs,
@@ -16,7 +16,7 @@ import {
   score,
   allowedProgrammingLanguages,
   problemsIds,
-} from '../../utils/getData.js';
+} from '../../../webview/backend/getData.js';
 import LoginForm from './LoginForm.js';
 import ProblemsSection from './ProblemsSection.js';
 import RunsSection from './RunsSection.js';

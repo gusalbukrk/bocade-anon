@@ -1,30 +1,12 @@
 import * as vscode from 'vscode';
 import * as runner from 'compile-run';
 
-import { getNonce } from '../utils/getNonce';
-import { getUri } from '../utils/getUri';
+import { getNonce, getUri } from '../../shared';
+import { sourceCodeExtension, testCases } from '../shared';
 
-type testCases = {
-  input: string;
-  expectedOutput: string;
-  output: string;
-  error: string;
-}[];
 type runMessage = { command: 'run'; testCases: testCases };
 
 type extractMessage = { command: 'extract' };
-
-type sourceCodeExtension =
-  | 'c'
-  | 'cpp'
-  | 'cc'
-  | 'java'
-  | 'py'
-  | 'py2'
-  | 'py3'
-  | 'js'
-  | 'cjs'
-  | 'mjs';
 
 class TestCasesWebviewViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'testCasesView';

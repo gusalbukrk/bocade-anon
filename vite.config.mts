@@ -9,8 +9,8 @@ export default defineConfig({
     rollupOptions: {
       external: ['vscode'],
       input: {
-        webview: resolve(__dirname, 'webview.html'),
-        view: resolve(__dirname, 'view.html'),
+        webview: resolve(__dirname, 'src/webview/frontend/webview.html'),
+        view: resolve(__dirname, 'src/view/frontend/view.html'),
       },
       output: {
         entryFileNames: `[name].js`,
@@ -34,7 +34,10 @@ export default defineConfig({
     {
       name: 'delete-index-html',
       writeBundle() {
-        ['./out/webview.html', './out/view.html'].map((file) => {
+        [
+          './out/src/view/frontend/view.html',
+          './out/src/webview/frontend/webview.html',
+        ].map((file) => {
           fs.unlink(file, (err) => {
             if (err) {
               throw err;

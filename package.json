@@ -3,6 +3,10 @@
   "displayName": "BOCA Team Dashboard",
   "description": "",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gusalbukrk/vscode-boca-team-dashboard.git"
+  },
   "engines": {
     "vscode": "^1.81.0"
   },
@@ -10,7 +14,7 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -49,15 +53,16 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
-    "compile": "concurrently \"npm run lint:back:watch\" \"npm run lint:front:watch\" \"tsc --watch --preserveWatchOutput -p ./\" \"vite build --watch -c vite.config.mts --emptyOutDir=false\"",
+    "compile": "concurrently \"npm run lint:config:watch\" \"npm run lint:back:watch\" \"npm run lint:front:watch\" \"tsc --watch --preserveWatchOutput -p ./\" \"vite build --watch -c vite.config.mts --emptyOutDir=false\"",
     "prepackage": "npm run lint",
     "package": "tsc -p ./ && vite build --mode production -c vite.config.mts --emptyOutDir=false",
     "lint": "npm run lint:config && npm run lint:back && npm run lint:front",
     "lint:config": "eslint . --ext .js,.mjs,.mts,.ts --ignore-pattern src/ --fix",
-    "lint:back": "eslint src/ --ext .ts --ignore-pattern src/webview/ --ignore-pattern src/view/ --fix",
-    "lint:back:watch": "onchange -i 'src/**/*.ts' --exclude 'src/{webview,view}/**/*' -- npm run lint:back",
-    "lint:front": "eslint src/webview/ src/view/ --ext .ts,.tsx --fix",
-    "lint:front:watch": "onchange -i 'src/{webview,view}/**/*.{ts,tsx}' -- npm run lint:front",
+    "lint:config:watch": "onchange -i '*.{js,mjs,mts,ts}' --exclude 'src/**/*' -- npm run lint:config",
+    "lint:back": "eslint src/ --ext .ts --ignore-pattern src/view/frontend/ --ignore-pattern src/webview/frontend/ --fix",
+    "lint:back:watch": "onchange -i 'src/**/*.ts' --exclude 'src/{view,webview}/frontend/**/*' -- npm run lint:back",
+    "lint:front": "eslint src/view/frontend/ src/webview/frontend/ --ext .ts,.tsx --fix",
+    "lint:front:watch": "onchange -i 'src/{view,webview}/frontend/**/*.{ts,tsx}' -- npm run lint:front",
     "prepare": "husky"
   },
   "extensionDependencies": [
