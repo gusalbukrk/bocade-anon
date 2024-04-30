@@ -2,6 +2,8 @@ import mime from 'mime-types';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import * as vscode from 'vscode';
+import FormData from 'form-data';
+import { Buffer, Blob } from 'node:buffer';
 
 import getCredentials, { credentials } from './getCredentials';
 import { getUri, getNonce } from '../../shared';
@@ -313,7 +315,12 @@ class BocaTeamDashboardWebview {
       // as you can see here https://nodejs.org/api/buffer.html#class-file,
       // API is no longer experimental as of v20
       // (to check which Node version VS Code is running on, go to Help > About)
-      formBody.append('sourcefile', blob, path.basename(filePath));
+      formBody.append(
+        'sourcefile',
+        // https://stackoverflow.com/a/73469658
+        Buffer.from(await blob.arrayBuffer()),
+        path.basename(filePath),
+      );
       formBody.append('Submit', 'Send');
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
+import fetch, { Headers } from 'node-fetch';
+import FormData from 'form-data';
 
 import * as vscode from 'vscode';
 import jsdom, { JSDOM } from 'jsdom';
