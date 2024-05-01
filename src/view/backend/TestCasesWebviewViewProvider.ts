@@ -119,7 +119,10 @@ async function runCode(
     case 'cc':
       return await runner.cpp.runFile(filePath, { stdin });
     case 'java':
-      return await runner.java.runFile(filePath, { stdin });
+      return await runner.java.runFile(filePath, {
+        stdin,
+        compileTimeout: 10000,
+      });
     case 'py':
     case 'py2':
     case 'py3':

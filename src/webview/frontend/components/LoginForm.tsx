@@ -40,7 +40,7 @@ const LoginForm = ({
       ip: get('ip'),
       username: get('username'),
       password: get('password'),
-      expireAt: Date.now() + 1000 * 60 * 60 * 1 /* TTL */,
+      expireAt: Date.now() + 1000 * 60 * 60 * 6 /* TTL */,
     };
 
     if (Object.values(credentials).some((c) => c === '')) {

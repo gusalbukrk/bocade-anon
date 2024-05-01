@@ -62,6 +62,24 @@ export async function activate(context: vscode.ExtensionContext) {
   // the tab in other tab group that already was previously activated
   vscode.window.tabGroups.onDidChangeTabGroups(postCurrentTabChangedMessage);
 
+  // 2 represents dark mode
+  // https://code.visualstudio.com/api/references/vscode-api#ColorThemeKind
+  const updateDarkModeTogglerTooltip = () =>
+    (darkModeToggler.tooltip = `${vscode.window.activeColorTheme.kind !== (2 as vscode.ColorThemeKind) ? 'Enable' : 'Disable'} dark mode`);
+  //
+  const darkModeToggler = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    -99, // lower means more to the right
+  );
+  darkModeToggler.text = '$(color-mode)';
+  darkModeToggler.name = 'Toggle dark mode';
+  updateDarkModeTogglerTooltip();
+  darkModeToggler.command = 'workbench.action.toggleLightDarkThemes';
+  darkModeToggler.show();
+  vscode.window.onDidChangeActiveColorTheme(() => {
+    updateDarkModeTogglerTooltip();
+  });
+
   const organizeButton = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Right,
     -100, // lower means more to the right
