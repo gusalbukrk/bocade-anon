@@ -1,7 +1,8 @@
 {
   "name": "boca-team-dashboard",
   "displayName": "BOCA Team Dashboard",
-  "description": "",
+  "icon": "media/icon.png",
+  "description": "Improved UX for participants in programming contests administered by BOCA.",
   "version": "0.0.1",
   "repository": {
     "type": "git",
