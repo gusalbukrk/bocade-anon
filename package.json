@@ -25,6 +25,10 @@
         "title": "BOCA Team Dashboard – Open dashboard"
       },
       {
+        "command": "boca-team-dashboard.delete",
+        "title": "BOCA Team Dashboard – Delete credentials"
+      },
+      {
         "command": "boca-team-dashboard.organize",
         "title": "BOCA Team Dashboard – Organize open tabs"
       },

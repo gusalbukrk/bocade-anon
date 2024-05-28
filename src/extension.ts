@@ -27,6 +27,17 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(openCommand);
   //
+  const deleteCommand = vscode.commands.registerCommand(
+    'boca-team-dashboard.delete',
+    async () => {
+      console.log('!!!', await context.secrets.get('credentials'));
+      console.log('!!!', await context.secrets.get('cookieJar'));
+      await context.secrets.delete('credentials');
+      await context.secrets.delete('cookieJar');
+    },
+  );
+  context.subscriptions.push(deleteCommand);
+  //
   const organizeCommand = vscode.commands.registerCommand(
     'boca-team-dashboard.organize',
     organize,
