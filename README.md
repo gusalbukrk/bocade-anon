@@ -25,7 +25,7 @@ Quickly rearrange editor for optimized navigation.
 
 <img src="./media/organize.gif" width="800px" />
 
-### Support for light and dark modes
+### Support for light and dark modes and toggle button
 
 <img src="./media/theme.gif" width="800px" />
 </br>
