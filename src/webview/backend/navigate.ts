@@ -14,13 +14,13 @@ type cookieJarObj = ReturnType<jsdom.CookieJar['toJSON']>;
 type errorObject = { message: string };
 
 /**
- * Navigate to a page in BOCA web dashboard which requires authentication and return its JSDOM.
+ * Navigate to a page in BOCA web contestant interface which requires authentication and return its JSDOM.
  *
  * Details: if there's a stored cookie jar and it's valid, return page in `pagePath` (valid means
  * user already authenticated in BOCA with it or it was successfully used to authenticate just now);
  * else, generate new cookie jar, authenticate it in BOCA, store it and return page in `pagePath`;
  * also, handles calls with `pagePath` set to index/login page as a request for logging out
- * (in BOCA web dashboard, log out is triggered by visiting index page when user is logged in),
+ * (in BOCA web contestant interface, log out is triggered by visiting index page when user is logged in),
  * assuming navigation to index page is request for logging out is possible because this function
  * is never used to get index page JSDOM because it has no relevant data (only a login form)
  *
@@ -52,7 +52,7 @@ async function getPageJsdom(
     const pageJsdom = await JSDOM.fromURL(url, { cookieJar: storedCookieJar });
 
     if (isLogoutPath(pagePath)) {
-      // in BOCA web dashboard, log out is triggered by visiting index page when user is logged in
+      // in BOCA web contestant interface, log out is triggered by visiting index page when user is logged in
       // in the extension, it's also necessary to clear stored data
       await secrets.delete('credentials');
       await secrets.delete('cookieJar');

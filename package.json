@@ -1,12 +1,12 @@
 {
-  "name": "boca-team-dashboard",
-  "displayName": "BOCA Team Dashboard",
+  "name": "bocade",
+  "displayName": "BOCADE",
   "icon": "media/icon.png",
   "description": "Improved UX for participants in programming contests administered by BOCA.",
   "version": "0.0.1",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gusalbukrk/vscode-boca-team-dashboard.git"
+    "url": "https://github.com/gusalbukrk/bocade.git"
   },
   "engines": {
     "vscode": "^1.81.0"
@@ -21,20 +21,20 @@
   "contributes": {
     "commands": [
       {
-        "command": "boca-team-dashboard.open",
-        "title": "BOCA Team Dashboard – Open dashboard"
+        "command": "bocade.open",
+        "title": "BOCADE – Open BOCA contestant interface"
       },
       {
-        "command": "boca-team-dashboard.delete",
-        "title": "BOCA Team Dashboard – Delete credentials"
+        "command": "bocade.delete",
+        "title": "BOCADE – Delete credentials"
       },
       {
-        "command": "boca-team-dashboard.organize",
-        "title": "BOCA Team Dashboard – Organize open tabs"
+        "command": "bocade.organize",
+        "title": "BOCADE – Organize open tabs"
       },
       {
-        "command": "boca-team-dashboard.extract",
-        "title": "BOCA Team Dashboard – Extract test cases from PDF"
+        "command": "bocade.extract",
+        "title": "BOCADE – Extract test cases from PDF"
       }
     ],
     "icons": {

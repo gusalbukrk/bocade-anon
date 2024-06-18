@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import BocaTeamDashboardWebview from './webview/backend/BocaTeamDashboardWebview';
+import BocadeWebview from './webview/backend/BocadeWebview';
 import TestCasesWebviewViewProvider from './view/backend/TestCasesWebviewViewProvider';
 
 import organize from './commands/organize';
@@ -19,16 +19,13 @@ const postCurrentTabChangedMessageBase = async (
 };
 
 export async function activate(context: vscode.ExtensionContext) {
-  const openCommand = vscode.commands.registerCommand(
-    'boca-team-dashboard.open',
-    () => {
-      BocaTeamDashboardWebview.render(context.extensionUri, context.secrets);
-    },
-  );
+  const openCommand = vscode.commands.registerCommand('bocade.open', () => {
+    BocadeWebview.render(context.extensionUri, context.secrets);
+  });
   context.subscriptions.push(openCommand);
   //
   const deleteCommand = vscode.commands.registerCommand(
-    'boca-team-dashboard.delete',
+    'bocade.delete',
     async () => {
       console.log('!!!', await context.secrets.get('credentials'));
       console.log('!!!', await context.secrets.get('cookieJar'));
@@ -39,18 +36,17 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(deleteCommand);
   //
   const organizeCommand = vscode.commands.registerCommand(
-    'boca-team-dashboard.organize',
+    'bocade.organize',
     organize,
   );
   context.subscriptions.push(organizeCommand);
   //
-  const extractCommand = vscode.commands.registerCommand(
-    'boca-team-dashboard.extract',
-    () => extract(testCasesProvider),
+  const extractCommand = vscode.commands.registerCommand('bocade.extract', () =>
+    extract(testCasesProvider),
   );
   context.subscriptions.push(extractCommand);
 
-  await vscode.commands.executeCommand('boca-team-dashboard.open');
+  await vscode.commands.executeCommand('bocade.open');
 
   const testCasesProvider = new TestCasesWebviewViewProvider(
     context.extensionUri,
@@ -96,9 +92,9 @@ export async function activate(context: vscode.ExtensionContext) {
     -100, // lower means more to the right
   );
   organizeButton.text = '$(split-horizontal)   Organize';
-  organizeButton.name = 'BOCA Team Dashboard – Organize tabs';
-  organizeButton.command = 'boca-team-dashboard.organize';
-  organizeButton.tooltip = 'BOCA Team Dashboard – Organize tabs';
+  organizeButton.name = 'BOCADE – Organize tabs';
+  organizeButton.command = 'bocade.organize';
+  organizeButton.tooltip = 'BOCADE – Organize tabs';
   organizeButton.backgroundColor = new vscode.ThemeColor(
     'statusBarItem.warningBackground',
   );

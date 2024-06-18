@@ -35,8 +35,8 @@ type submitClarificationMessage = {
   question: string;
 };
 
-class BocaTeamDashboardWebview {
-  public static currentPanel: BocaTeamDashboardWebview | undefined;
+class BocadeWebview {
+  public static currentPanel: BocadeWebview | undefined;
   private readonly _panel: vscode.WebviewPanel;
   private readonly _secrets: vscode.SecretStorage;
   private _disposables: vscode.Disposable[] = [];
@@ -53,7 +53,7 @@ class BocaTeamDashboardWebview {
         this.dispose();
 
         // reopen the webview if user has closed it
-        await vscode.commands.executeCommand('boca-team-dashboard.open');
+        await vscode.commands.executeCommand('bocade.open');
       },
       null,
       this._disposables,
@@ -73,12 +73,12 @@ class BocaTeamDashboardWebview {
     extensionUri: vscode.Uri,
     secrets: vscode.SecretStorage,
   ) {
-    if (BocaTeamDashboardWebview.currentPanel) {
-      BocaTeamDashboardWebview.currentPanel._panel.reveal();
+    if (BocadeWebview.currentPanel) {
+      BocadeWebview.currentPanel._panel.reveal();
     } else {
       const panel = vscode.window.createWebviewPanel(
-        'DashboardWebview',
-        'BOCA Team Dashboard',
+        'Webview',
+        'BOCADE',
         vscode.ViewColumn.One,
         {
           enableScripts: true,
@@ -96,7 +96,7 @@ class BocaTeamDashboardWebview {
         },
       );
 
-      BocaTeamDashboardWebview.currentPanel = new BocaTeamDashboardWebview(
+      BocadeWebview.currentPanel = new BocadeWebview(
         panel,
         secrets,
         extensionUri,
@@ -105,7 +105,7 @@ class BocaTeamDashboardWebview {
   }
 
   public dispose() {
-    BocaTeamDashboardWebview.currentPanel = undefined;
+    BocadeWebview.currentPanel = undefined;
 
     this._panel.dispose();
 
@@ -147,7 +147,7 @@ class BocaTeamDashboardWebview {
           <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; font-src ${webview.cspSource} data:; img-src ${webview.cspSource} https: http:; script-src 'nonce-${nonce}';">
           <link href="${stylesheetUriStr}" rel="stylesheet" />
           <link href="${codiconsUriStr}" rel="stylesheet" />
-          <title>BOCA Team Dashboard</title>
+          <title>BOCADE</title>
         </head>
         <body>
           <div id="root"></div>
@@ -403,4 +403,4 @@ class BocaTeamDashboardWebview {
   }
 }
 
-export default BocaTeamDashboardWebview;
+export default BocadeWebview;

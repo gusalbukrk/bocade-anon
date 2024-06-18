@@ -8,7 +8,7 @@ import {
   VSCodeProgressRing,
 } from '@vscode/webview-ui-toolkit/react';
 
-import { credentials } from '../../../webview/backend/getCredentials.js';
+import { credentials } from '../../backend/getCredentials.js';
 import {
   problems,
   runs,
@@ -16,7 +16,7 @@ import {
   score,
   allowedProgrammingLanguages,
   problemsIds,
-} from '../../../webview/backend/getData.js';
+} from '../../backend/getData.js';
 import LoginForm from './LoginForm.js';
 import ProblemsSection from './ProblemsSection.js';
 import RunsSection from './RunsSection.js';
@@ -45,7 +45,7 @@ type updateRunsDataMessage = {
   runs: runs;
 };
 
-const Dashboard = ({
+const ContestantInterface = ({
   vscode,
 }: {
   vscode: ReturnType<typeof acquireVsCodeApi>;
@@ -166,7 +166,8 @@ const Dashboard = ({
     <>
       <header>
         <div>
-          <h1>BOCA Team Dashboard</h1>
+          <h1>BOCADE</h1>
+          <h2>BOCA Development Environment</h2>
           {problems !== undefined /* indicates that the data has loaded */ && (
             <>
               <VSCodeButton
@@ -201,7 +202,7 @@ const Dashboard = ({
             </p>
             <p>
               <VSCodeLink href={`http://${credentials.ip}/boca`}>
-                Go to BOCA web dashboard
+                Go to BOCA web interface
               </VSCodeLink>
             </p>
             <VSCodeButton
@@ -280,4 +281,4 @@ const Dashboard = ({
   );
 };
 
-export default Dashboard;
+export default ContestantInterface;

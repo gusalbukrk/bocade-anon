@@ -28,7 +28,7 @@ const organize = async () => {
     await vscode.commands.executeCommand('workbench.action.previousEditor');
   }
 
-  // place the Boca Team Dashboard and PDFs on the right editor group,
+  // place the BOCADE and PDF files on the right editor group,
   // anything else goes on the left editor group
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   while (true) {
@@ -36,10 +36,7 @@ const organize = async () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       vscode.window.tabGroups.activeTabGroup.activeTab!.label;
 
-    if (
-      currentEditorLabel === 'BOCA Team Dashboard' ||
-      /\.pdf$/.test(currentEditorLabel)
-    ) {
+    if (currentEditorLabel === 'BOCADE' || /\.pdf$/.test(currentEditorLabel)) {
       await vscode.commands.executeCommand(
         'workbench.action.moveEditorToRightGroup',
       );

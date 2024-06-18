@@ -62,7 +62,7 @@ class TestCasesWebviewViewProvider implements vscode.WebviewViewProvider {
             results,
           });
         } else {
-          await vscode.commands.executeCommand('boca-team-dashboard.extract');
+          await vscode.commands.executeCommand('bocade.extract');
         }
       },
     );

@@ -1,13 +1,13 @@
-# VS Code BOCA Team Dashboard
+# BOCADE - BOCA Development Environment
 
-Improved UX for participants in programming contests administered by BOCA.
+VS Code extension for improved UX for participants in programming contests administered by BOCA.
 
 <img src="./media/main.png" width="800px" />
 </br>
 
 ## Features
 
-### Integrated BOCA dashboard and PDF viewer
+### Integrated BOCA contestant interface and PDF viewer
 
 Eliminate the need to switch between applications.
 
@@ -41,7 +41,7 @@ After installing Maratona Linux and set up its communication with the BOCA serve
 3. Execute `sudo apt update && sudo apt full-upgrade -y` to update the system.
 4. Execute `sudo apt install python3-pip && sudo -H -u icpc pip install --user pdfplumber` to install `pdfplumber` (needed for the PDF test cases extraction functionality to work).
 5. Execute `sudo apt install curl && curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs` to install Node v20 LTS from [NodeSource](https://github.com/nodesource/distributions/blob/master/README.md). If getting error `Failed to run 'apt-get update'` in the `setup_20.x` script execution, it may be due to wrong system time.
-6. Download the [`vscode-pdf`](https://marketplace.visualstudio.com/items?itemName=tomoki1207.pdf) and [`vscode-boca-team-dashboard`](https://marketplace.visualstudio.com/items?itemName=gusalbukrk.boca-team-dashboard) extension installers (`.vsix` files) from the VS Code Marketplace.
+6. Download the [`vscode-pdf`](https://marketplace.visualstudio.com/items?itemName=tomoki1207.pdf) and [`vscode-bocade`](https://marketplace.visualstudio.com/items?itemName=gusalbukrk.bocade) extension installers (`.vsix` files) from the VS Code Marketplace.
 7. Execute `sudo cp Downloads/*.vsix /home/icpc/Downloads` to copy the downloaded files to inside the `icpc` user's `home` directory.
 8. Execute `systemctl reboot` to restart the system in order to reenable the `maratona-firewall`.
 9. Log in with the `icpc` user.
