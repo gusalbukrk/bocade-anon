@@ -4,10 +4,6 @@
   "icon": "media/icon.png",
   "description": "Improved UX for participants in programming contests administered by BOCA.",
   "version": "0.0.1",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/gusalbukrk/bocade.git"
-  },
   "engines": {
     "vscode": "^1.81.0"
   },

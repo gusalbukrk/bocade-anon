@@ -282,10 +282,8 @@ const ContestantInterface = ({
       {displayFooter && (
         <footer>
           <p>
-            <VSCodeLink href="https://github.com/gusalbukrk">
-              gusalbukrk
-            </VSCodeLink>{' '}
-            @ IF Goiano – 2024
+            <VSCodeLink href="https://github.com/">Author</VSCodeLink> @
+            Institution – 2024
           </p>
         </footer>
       )}
