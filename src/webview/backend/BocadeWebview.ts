@@ -158,6 +158,22 @@ class BocadeWebview {
   }
 
   private _setWebviewMessageListener(webview: vscode.Webview) {
+    // sync stored displayFooter configuration with VS Code settings
+    const updateStoredDisplayFooterConfiguration = async () => {
+      const displayFooter = vscode.workspace
+        .getConfiguration('bocade')
+        .get('displayFooter', true) as boolean;
+
+      await this._secrets.store('displayFooter', displayFooter.toString());
+    };
+
+    vscode.workspace.onDidChangeConfiguration(async (e) => {
+      if (e.affectsConfiguration('bocade.displayFooter')) {
+        await updateStoredDisplayFooterConfiguration();
+        await updateDisplayFooter();
+      }
+    });
+
     webview.onDidReceiveMessage(
       async (
         message:
@@ -200,7 +216,12 @@ class BocadeWebview {
           return;
         }
 
-        if (command === 'loaded' || command === 'reload') {
+        if (command === 'loaded') {
+          await updateStoredDisplayFooterConfiguration();
+          await updateDisplayFooter();
+
+          await updateData();
+        } else if (command === 'reload') {
           await updateData();
         } else if (command === 'submit-clarification') {
           await submitClarification(message);
@@ -218,7 +239,7 @@ class BocadeWebview {
       this._disposables,
     );
 
-    /** update all data in webview */
+    // update all data in webview
     const updateData = async () => {
       const credentials = await getCredentials(this._secrets, false);
       const problems = await getProblems(this._secrets);
@@ -241,6 +262,15 @@ class BocadeWebview {
         score,
         allowedProgrammingLanguages,
         problemsIds,
+      });
+    };
+
+    // update displayFooter in webview
+    const updateDisplayFooter = async () => {
+      const displayFooter = await this._secrets.get('displayFooter');
+      await this._panel.webview.postMessage({
+        command: 'update-display-footer',
+        displayFooter: displayFooter === 'true',
       });
     };
 

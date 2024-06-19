@@ -45,6 +45,11 @@ type updateRunsDataMessage = {
   runs: runs;
 };
 
+type updateDisplayFooterMessage = {
+  command: 'update-display-footer';
+  displayFooter: boolean;
+};
+
 const ContestantInterface = ({
   vscode,
 }: {
@@ -61,6 +66,7 @@ const ContestantInterface = ({
   const [problemsIds, setProblemsIds] = useState<problemsIds>();
   const [isReloading, setIsReloading] = useState(false);
   const [showReloadedWarning, setShowReloadedWarning] = useState(false);
+  const [displayFooter, setDisplayFooter] = useState<boolean>(false);
 
   // `setInterval` is being re-set after every `credentials` update to avoid stale closure
   // https://dmitripavlutin.com/react-hooks-stale-closures/
@@ -104,7 +110,8 @@ const ContestantInterface = ({
     const message = event.data as
       | updateDataMessage
       | updateClarificationsDataMessage
-      | updateRunsDataMessage;
+      | updateRunsDataMessage
+      | updateDisplayFooterMessage;
 
     if (message.command === 'update-data') {
       setCredentials(message.credentials);
@@ -133,6 +140,9 @@ const ContestantInterface = ({
       setRuns(message.runs);
       setIsReloading(false);
       setShowReloadedWarning(true);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    } else if (message.command === 'update-display-footer') {
+      setDisplayFooter(message.displayFooter);
     }
   }
 
@@ -269,14 +279,16 @@ const ContestantInterface = ({
           </VSCodePanels>
         )}
       </main>
-      <footer>
-        <p>
-          <VSCodeLink href="https://github.com/gusalbukrk">
-            gusalbukrk
-          </VSCodeLink>{' '}
-          @ IF Goiano – 2024
-        </p>
-      </footer>
+      {displayFooter && (
+        <footer>
+          <p>
+            <VSCodeLink href="https://github.com/gusalbukrk">
+              gusalbukrk
+            </VSCodeLink>{' '}
+            @ IF Goiano – 2024
+          </p>
+        </footer>
+      )}
     </>
   );
 };
