@@ -2,7 +2,7 @@
 
 VS Code extension for improved UX for participants in programming contests administered by BOCA.
 
-<img src="./media/main2.png" width="800px" />
+<img src="main2.png" width="800px" />
 </br>
 
 ## Features
@@ -11,23 +11,23 @@ VS Code extension for improved UX for participants in programming contests admin
 
 Eliminate the need to switch between applications.
 
-<img src="./media/integrated.gif" width="800px" />
+<img src="integrated.gif" width="800px" />
 
 ### Test cases panel
 
 Quickly assess code correctness.
 
-<img src="./media/test-cases.gif" width="800px" />
+<img src="test-cases.gif" width="800px" />
 
 ### Organize button
 
 Quickly rearrange editor for optimized navigation.
 
-<img src="./media/organize.gif" width="800px" />
+<img src="organize.gif" width="800px" />
 
 ### Support for light and dark modes and toggle button
 
-<img src="./media/modes.gif" width="800px" />
+<img src="modes.gif" width="800px" />
 </br>
 
 ## How to install on Maratona Linux
