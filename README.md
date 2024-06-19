@@ -27,7 +27,7 @@ Quickly rearrange editor for optimized navigation.
 
 ### Support for light and dark modes and toggle button
 
-<img src="./media/theme.gif" width="800px" />
+<img src="./media/modes.gif" width="800px" />
 </br>
 
 ## How to install on Maratona Linux
